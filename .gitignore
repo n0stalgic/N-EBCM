@@ -1,0 +1,25 @@
+# Build outputs
+build/
+*.o
+*.elf
+*.hex
+*.bin
+*.map
+*.lst
+
+# IDE files
+.vscode/
+*.uvprojx
+*.uvoptx
+.idea/
+
+# Vendor libs are too huge, don't commit
+Libraries/
+
+# Debug
+*.log
+*.dmp
+
+# OS junk
+.DS_Store
+Thumbs.db
