@@ -105,7 +105,7 @@ void ebcm_ssw_monbist(void)
 #if (IFX_CFG_SSW_ENABLE_MONBIST == 1U || EBCM_CFG_SSW_ENABLE_MONBIST == 1U)
     Ifx_Ssw_jumpToFunction(&ebcm_ssw_monbist_check);
 #else
-    ebcm_ssw_monbist_check
+    ebcm_ssw_monbist_check();
 
     /* Disable the write-protection for registers */
     IFX_CFG_SSW_CLEAR_SAFETY_ENDINIT();
@@ -147,3 +147,4 @@ void ebcm_ssw_monbist_check(void)
 #endif /* IFX_CFG_SSW_ENABLE_MONBIST == 1U && SLK_CFG_SSW_ENABLE_MONBIST == 0U */
 }
 #endif
+
