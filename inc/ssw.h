@@ -59,10 +59,11 @@
 
 typedef struct
 {
-    uint8               lbist_app_req_count;    /* Amount of LBIST requests (by application software) */
-    uint8               lbist_runs;             /* Amount of LBIST executions */
-    uint8               mcu_fw_check_count;     /* Amount of MCU_FW_CHECK executions*/
-    Ifx_SCU_RSTSTAT     RSTSTAT;                /* RSTSTAT register copy */
+    uint8               lbist_app_req_count;     /* Amount of LBIST requests (by application software) */
+    uint8               lbist_runs;              /* Amount of LBIST executions */
+    uint8               mcu_fw_check_count;      /* Amount of MCU_FW_CHECK executions*/
+    uint8               mcu_fw_check_fail_count; /* Amount of MCU_FW_CHECK failures */
+    Ifx_SCU_RSTSTAT     RSTSTAT;                 /* RSTSTAT register copy */
 
 } ssw_run_count_t;
 
@@ -109,7 +110,7 @@ IFX_EXTERN volatile ssw_run_count_t* ssw_run_count;
 /*********************************************************************************************************************/
 void run_app_sw_startup(void);
 void ebcm_trigger_warm_porst(void);
-void ebcm_trigger_sw_reset(ebcm_reset_code_t resetType);
+void ebcm_trigger_sw_reset(ebcm_reset_type_t resetType);
 void ebcm_ssw_lbist(void);
 ebcm_reset_code_t ebcm_eval_reset(void);
 

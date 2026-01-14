@@ -1,10 +1,10 @@
 /******************************************************************************
- * @file    ebcm_main.h
- * @brief   Interface for system wide ebcm defines
+ * @file    ssw_fw_chk.h
+ * @brief   Add brief here
  *
  * MIT License
  *
- * Copyright (c) 2025 n0stalgic
+ * Copyright (c) 2026 n0stalgic
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -25,17 +25,23 @@
  * SOFTWARE.
  *****************************************************************************/
 
-#ifndef INC_EBCM_MAIN_H_
-#define INC_EBCM_MAIN_H_
+#ifndef INC_SSW_MCU_FW_CHK_H_
+#define INC_SSW_MCU_FW_CHK_H_
 
 /*********************************************************************************************************************/
 /*-----------------------------------------------------Includes------------------------------------------------------*/
 /*********************************************************************************************************************/
-#include "ssw.h"
+
+#include "Ifx_Types.h"
+#include "IfxCpu.h"
+#include "IfxMtu_cfg.h"
 
 /*********************************************************************************************************************/
 /*------------------------------------------------------Macros-------------------------------------------------------*/
 /*********************************************************************************************************************/
+
+#define EBCM_MCU_FW_CHECK_MAX_RUNS       2
+
 
 /*********************************************************************************************************************/
 /*-------------------------------------------------Global variables--------------------------------------------------*/
@@ -45,15 +51,31 @@
 /*-------------------------------------------------Data Structures---------------------------------------------------*/
 /*********************************************************************************************************************/
 
- /* status of EBCM */
 typedef struct
- {
-    ssw_status_t           ssw_status;
-    ebcm_reset_code_t      reset_code;
-    boolean                wakeup_from_stby;
- } ebcm_status_t;
+{
+    uint16   eccd_val;
+    uint16   flt_status_val;
+    uint16   err_info_val;
+} ssh_register_t;
 
- IFX_EXTERN ebcm_status_t  ebcm_status;
+typedef struct
+{
+    IfxMtu_MbistSel  ssh_under_test;
+    uint16           memory_type;
+    uint16           in_sel_mask;
+    ssh_register_t   ssh_registers_def;
+    ssh_register_t   ssh_registers_stb;
+} memory_tested_t;
+
+typedef struct
+{
+    boolean mcu_fw_check_smu;
+    boolean mcu_fw_check_scu_stem;
+    boolean mcu_fw_check_scu_lclcon;
+    boolean mcu_fw_check_ssh;
+} mcu_fw_check_status_t;
+
+IFX_EXTERN mcu_fw_check_status_t mcu_fw_check_status;
 
  
 /*********************************************************************************************************************/
@@ -63,8 +85,15 @@ typedef struct
 /*********************************************************************************************************************/
 /*------------------------------------------------Function Prototypes------------------------------------------------*/
 /*********************************************************************************************************************/
- void init_ebcm(void);
- void init_cpu_safety(void);
+
+/*
+ * @brief The Safety Mechanism MCU_FW_CHECK is required for detecting failures, including both random hardware and
+ * systematic hardware/software, which may have affected the correct termination of the firmware.
+ */
+void ebcm_ssw_mcu_fw_check(void);
 
 
-#endif /* INC_EBCM_MAIN_H_ */
+void ebcm_clear_all_smu_alarms(void);
+
+
+#endif /* INC_SSW_MCU_FW_CHK_H_ */

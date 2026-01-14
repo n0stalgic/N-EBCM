@@ -54,13 +54,15 @@ void core0_main(void)
     IfxScuWdt_disableCpuWatchdog(IfxScuWdt_getCpuWatchdogPassword());
     IfxScuWdt_disableSafetyWatchdog(IfxScuWdt_getSafetyWatchdogPassword());
     
+    run_app_sw_startup();
+
     if (!ebcm_lockstep_injection_test())
     {
         /* Hang here because lockstep failed */
         while(1);
     }
 
-    run_app_sw_startup();
+
 
     /* Wait for CPU sync event */
     IfxCpu_emitEvent(&cpuSyncEvent);

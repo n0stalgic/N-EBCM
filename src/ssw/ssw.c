@@ -43,6 +43,8 @@
 #include "IfxSmu.h"
 #include "IfxSmu_cfg.h"
 #include "ssw_monbist.h"
+#include "ssw_mcu_fw_chk.h"
+#include "ssw_mcu_startup.h"
 
 /*********************************************************************************************************************/
 /*------------------------------------------------------Macros-------------------------------------------------------*/
@@ -70,6 +72,38 @@ boolean         ebcm_eval_standby(void);
 /*********************************************************************************************************************/
 /*---------------------------------------------Function Implementations----------------------------------------------*/
 /*********************************************************************************************************************/
+
+/*
+ * Triggering a Warm PORST via the LBIST.
+ * Note: "In AURIX(TM) TC3xx devices, LBIST execution terminates [..] with a warm reset." but
+ * "The Startup Software executed afterwards follows the flow as after cold power-on [..]"
+ * */
+void ebcm_trigger_warm_porst(void)
+{
+    ebcm_trigger_sw_reset(IfxScuRcu_ResetType_warmpoweron);
+}
+
+/*
+ * This function triggers either a SW Application Reset or a SW System Reset, based on the parameter resetType
+ * */
+void ebcm_trigger_sw_reset(ebcm_reset_type_t resetType)
+{
+    /* Get the CPU EndInit password */
+    uint16 password = IfxScuWdt_getCpuWatchdogPassword();
+
+    /* Configure the request trigger in the Reset Configuration Register */
+    IfxScuRcu_configureResetRequestTrigger(IfxScuRcu_Trigger_sw, (IfxScuRcu_ResetType) resetType);
+
+    /* Clear CPU EndInit protection to write in the SWRSTCON register of SCU */
+    IfxScuWdt_clearCpuEndinit(password);
+
+    /* Trigger a software reset based on the configuration of RSTCON register */
+    IfxCpu_triggerSwReset();
+
+    /* The following instructions are not executed if a SW reset occurs */
+    /* Set CPU EndInit protection */
+    IfxScuWdt_setCpuEndinit(password);
+}
 
 const char* ebcm_get_lbist_result_str(ssw_test_status status)
 {
@@ -161,7 +195,7 @@ void run_app_sw_startup(void)
    ebcm_ssw_lbist();
 #endif /* EBCM_CFG_SSW_ENABLE_LBIST_BOOT || EBCM_CFG_SSW_ENABLE_LBIST_APPSW */
 
-   ebcm_status.reset_status = ebcm_eval_reset();
+   ebcm_status.reset_code = ebcm_eval_reset();
    ebcm_status.wakeup_from_stby = ebcm_eval_standby();
 
 #if EBCM_CFG_SSW_ENABLE_MONBIST
@@ -171,6 +205,14 @@ void run_app_sw_startup(void)
      * */
     ebcm_ssw_monbist();
 #endif /* SLK_CFG_SSW_ENABLE_MONBIST */
+
+#if EBCM_CFG_SSW_ENABLE_MCU_FW_CHECK
+    ebcm_ssw_mcu_fw_check();
+#endif /* EBCM_CFG_SSW_ENABLE_MCU_FW_CHECK */
+
+#if EBCM_CFG_SSW_ENABLE_MCU_STARTUP
+    ebcm_ssw_mcu_startup();
+#endif /* EBCM_CFG_SSW_ENABLE_MCU_STARTUP */
 
     /* TODO: Implement the rest of the silicon BISTs according to AN0029 Safety Critical Application Development */
 }
