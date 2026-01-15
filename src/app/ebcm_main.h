@@ -1,6 +1,6 @@
 /******************************************************************************
- * @file    ssw.h
- * @brief   Interface for safe software startup
+ * @file    ebcm_main.h
+ * @brief   Interface for system wide ebcm defines
  *
  * MIT License
  *
@@ -25,29 +25,18 @@
  * SOFTWARE.
  *****************************************************************************/
 
-#ifndef INC_SSW_H_
-#define INC_SSW_H_
+#ifndef INC_EBCM_MAIN_H_
+#define INC_EBCM_MAIN_H_
 
 /*********************************************************************************************************************/
 /*-----------------------------------------------------Includes------------------------------------------------------*/
 /*********************************************************************************************************************/
-#include "Ifx_Types.h"
-#include "IfxCpu.h"
-#include "IfxPms_reg.h"
-#include "IfxScuRcu.h"
-#include "IfxScu_reg.h"
+#include "ssw.h"
+#include "smu.h"
 
 /*********************************************************************************************************************/
 /*------------------------------------------------------Macros-------------------------------------------------------*/
 /*********************************************************************************************************************/
-
-#define PMSWSTAT2_WAKE_UP_FLAGS_MASK     0xFF
-
-/**
- * @brief address to store power-on check metadata in SCR XRAM
- */
-#define SSW_STATUS_DATA_ADDRESS (*(volatile ssw_run_count_t* ) PMS_XRAM)
-
 
 /*********************************************************************************************************************/
 /*-------------------------------------------------Global variables--------------------------------------------------*/
@@ -57,48 +46,18 @@
 /*-------------------------------------------------Data Structures---------------------------------------------------*/
 /*********************************************************************************************************************/
 
+ /* status of EBCM */
 typedef struct
 {
-    uint8               lbist_app_req_count;     /* Amount of LBIST requests (by application software) */
-    uint8               lbist_runs;              /* Amount of LBIST executions */
-    uint8               mcu_fw_check_count;      /* Amount of MCU_FW_CHECK executions*/
-    uint8               mcu_fw_check_fail_count; /* Amount of MCU_FW_CHECK failures */
-    Ifx_SCU_RSTSTAT     RSTSTAT;                 /* RSTSTAT register copy */
+    ssw_status_t            ssw_status;
+    ebcm_reset_code_t       reset_code;
+    boolean                 wakeup_from_stby;
+    smu_execution_status_t  smu_status;
+    boolean                 unlock_config;
 
-} ssw_run_count_t;
+} ebcm_status_t;
 
-typedef enum
-{
-    FAILED = 0,
-    PASSED,
-    TEST_NOT_EVAL
-} ssw_test_status;
-
-typedef struct
-{
-
-        ssw_test_status    lbist_status;
-        ssw_test_status    monbist_status;
-        ssw_test_status    mcu_fw_chk_status;
-        ssw_test_status    mcu_startup_status;
-        ssw_test_status    alive_alarm_status;
-        ssw_test_status    mbist_status;
-} ssw_status_t;
-
-typedef struct
-{
-    boolean test_ok_flag;
-    boolean smu_error_flag;
-    boolean pms_error_flag;
-} ssw_monbist_status_t;
-
-IFX_EXTERN ssw_monbist_status_t monbist_status;
-
-
-typedef IfxScuRcu_ResetType ebcm_reset_type_t;
-typedef IfxScuRcu_ResetCode ebcm_reset_code_t;
-
-IFX_EXTERN volatile ssw_run_count_t* ssw_run_count;
+ IFX_EXTERN ebcm_status_t  ebcm_status;
 
  
 /*********************************************************************************************************************/
@@ -108,15 +67,8 @@ IFX_EXTERN volatile ssw_run_count_t* ssw_run_count;
 /*********************************************************************************************************************/
 /*------------------------------------------------Function Prototypes------------------------------------------------*/
 /*********************************************************************************************************************/
-void run_app_sw_startup(void);
-void ebcm_trigger_warm_porst(void);
-void ebcm_trigger_sw_reset(ebcm_reset_type_t resetType);
-void ebcm_ssw_lbist(void);
-ebcm_reset_code_t ebcm_eval_reset(void);
-
-const char* ebcm_get_lbist_result_str(ssw_test_status status);
-
-boolean ebcm_lockstep_injection_test(void);
+ void init_ebcm(void);
+ void init_cpu_safety(void);
 
 
-#endif /* INC_SSW_H_ */
+#endif /* INC_EBCM_MAIN_H_ */

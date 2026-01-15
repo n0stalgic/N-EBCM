@@ -214,5 +214,11 @@ void run_app_sw_startup(void)
     ebcm_ssw_mcu_startup();
 #endif /* EBCM_CFG_SSW_ENABLE_MCU_STARTUP */
 
+#if EBCM_CFG_SSW_ENABLE_ALIVE_ALARM_TEST
+    ebcm_ssw_alive_alarm_test();
+#endif /* EBCM_CFG_SSW_ENABLE_ALIVE_ALARM_TEST */
+
+
+
     /* TODO: Implement the rest of the silicon BISTs according to AN0029 Safety Critical Application Development */
 }
