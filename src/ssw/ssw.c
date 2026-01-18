@@ -45,6 +45,9 @@
 #include "ssw_monbist.h"
 #include "ssw_mcu_fw_chk.h"
 #include "ssw_mcu_startup.h"
+#include "ssw_regmon_test.h"
+#include "ssw_mbist.h"
+#include "ssw_alive_alarm_test.h"
 
 /*********************************************************************************************************************/
 /*------------------------------------------------------Macros-------------------------------------------------------*/
@@ -217,6 +220,14 @@ void run_app_sw_startup(void)
 #if EBCM_CFG_SSW_ENABLE_ALIVE_ALARM_TEST
     ebcm_ssw_alive_alarm_test();
 #endif /* EBCM_CFG_SSW_ENABLE_ALIVE_ALARM_TEST */
+
+#if EBCM_CFG_SSW_ENABLE_REG_MONITOR_TEST
+    ebcm_ssw_reg_mon_test();
+#endif /* EBCM_CFG_SSW_ENABLE_REG_MONITOR_TEST */
+
+#if EBCM_CFG_SSW_ENABLE_MBIST
+    ebcm_ssw_mbist();
+#endif /* EBCM_CFG_SSW_ENABLE_REG_MONITOR_TEST */
 
 
 

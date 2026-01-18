@@ -156,7 +156,10 @@ void printInfo(IfxStdIf_DPipe *io)
     IfxStdIf_DPipe_print(io, "MONBIST                [%s]"ENDLINE, monbist_status ? "PASSED" : "FAILED");
     IfxStdIf_DPipe_print(io, "MCU_FW                 [%s]"ENDLINE, ebcm_status.ssw_status.mcu_fw_chk_status == PASSED ? "PASSED" : "FAILED");
     IfxStdIf_DPipe_print(io, "MCU_STARTUP            [%s]"ENDLINE, ebcm_status.ssw_status.mcu_startup_status ? "OK" : "NOK");
-    IfxStdIf_DPipe_print(io, "SMU_ALIVE_ALARM        [%s]\r\n"ENDLINE, ebcm_status.ssw_status.alive_alarm_status ? "OK" : "NOK");
+    IfxStdIf_DPipe_print(io, "SMU_ALIVE_ALARM        [%s]"ENDLINE, ebcm_status.ssw_status.alive_alarm_status ? "OK" : "NOK");
+    IfxStdIf_DPipe_print(io, "SMU_REGISTER_MONITOR   [%s]"ENDLINE, ebcm_status.smu_status.regMonitorTestSmu ? "PASSED" : "FAILED");
+    IfxStdIf_DPipe_print(io, "SRAM_BIST              [%s]\r\n"ENDLINE, ebcm_status.ssw_status.mbist_status  ? "PASSED" : "FAILED");
+    IfxStdIf_DPipe_print(io, "Safe SW boot procedure completed.\r\n"ENDLINE);
     IfxStdIf_DPipe_print(io, "In order to toggle the LEDs enter the command '" COMMAND_TOGGLE "' followed by one of the "ENDLINE);
     IfxStdIf_DPipe_print(io, "following parameters:                                                         "ENDLINE);
     IfxStdIf_DPipe_print(io, "  - '0': turns on all the LEDs on the board                                   "ENDLINE);
