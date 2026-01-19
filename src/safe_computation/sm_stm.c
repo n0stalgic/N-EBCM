@@ -1,10 +1,10 @@
 /******************************************************************************
- * @file    ebcm_main.h
- * @brief   Interface for system wide ebcm defines
+ * @file    sm_stm.c
+ * @brief   Add brief here
  *
  * MIT License
  *
- * Copyright (c) 2025 n0stalgic
+ * Copyright (c) 2026 n0stalgic
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -25,41 +25,26 @@
  * SOFTWARE.
  *****************************************************************************/
 
-#ifndef INC_EBCM_MAIN_H_
-#define INC_EBCM_MAIN_H_
 
 /*********************************************************************************************************************/
 /*-----------------------------------------------------Includes------------------------------------------------------*/
 /*********************************************************************************************************************/
 #include <safe_computation/smu.h>
+#include "IfxStm.h"
+#include "ebcm_cfg.h"
 #include "ssw.h"
+#include "sm_stm.h"
 
 /*********************************************************************************************************************/
 /*------------------------------------------------------Macros-------------------------------------------------------*/
 /*********************************************************************************************************************/
+#define STM_APP_RESET       0
+#define REPEAT_COUNT        5
 
 /*********************************************************************************************************************/
 /*-------------------------------------------------Global variables--------------------------------------------------*/
 /*********************************************************************************************************************/
 
-/*********************************************************************************************************************/
-/*-------------------------------------------------Data Structures---------------------------------------------------*/
-/*********************************************************************************************************************/
-
- /* status of EBCM */
-typedef struct
-{
-    ssw_status_t            ssw_status;
-    ebcm_reset_code_t       reset_code;
-    boolean                 wakeup_from_stby;
-    smu_execution_status_t  smu_status;
-    boolean                 unlock_config;
-
-} ebcm_status_t;
-
- IFX_EXTERN ebcm_status_t  ebcm_status;
-
- 
 /*********************************************************************************************************************/
 /*--------------------------------------------Private Variables/Constants--------------------------------------------*/
 /*********************************************************************************************************************/
@@ -67,8 +52,79 @@ typedef struct
 /*********************************************************************************************************************/
 /*------------------------------------------------Function Prototypes------------------------------------------------*/
 /*********************************************************************************************************************/
- void init_ebcm(void);
- void init_cpu_safety(void);
+boolean check_for_disabled_stm(void);
 
+/*********************************************************************************************************************/
+/*---------------------------------------------Function Implementations----------------------------------------------*/
+/*********************************************************************************************************************/
 
-#endif /* INC_EBCM_MAIN_H_ */
+boolean check_for_disabled_stm(void)
+{
+    boolean is_an_stm_disabled = (MODULE_STM0.CLC.B.DISS == 1 ||
+                                      MODULE_STM1.CLC.B.DISS == 1 ||
+                                          MODULE_STM2.CLC.B.DISS == 1);
+
+    return is_an_stm_disabled;
+}
+
+void stm_plausibility_chk(IfxCpu_ResourceCpu cpu_idx)
+{
+    /* Only do STM monitoring if all STM modules are enabled */
+    if (check_for_disabled_stm())
+    {
+        return;
+    }
+
+    Ifx_STM* stmA;
+    Ifx_STM* stmB;
+
+    switch(cpu_idx)
+    {
+        case IfxCpu_ResourceCpu_0:
+            stmA = &MODULE_STM0;
+            stmB = &MODULE_STM1;
+            break;
+        case IfxCpu_ResourceCpu_1:
+            stmA = &MODULE_STM1;
+            stmB = &MODULE_STM2;
+            break;
+        case IfxCpu_ResourceCpu_2:
+            stmA = &MODULE_STM2;
+            stmB = &MODULE_STM0;
+            break;
+        default:
+            while (1)
+            {
+                /* hang currently for debug */
+                __debug();
+            }
+            break;
+    }
+
+    uint8 repeatNtimes = REPEAT_COUNT;
+
+    while (repeatNtimes)
+    {
+        /* cross-check counters of STM A and STM B, raise alarm if deviation is great than 2 ms */
+        uint64 STM_A_Count = IfxStm_get(stmA);
+        uint64 STM_B_Count = IfxStm_get(stmB);
+
+        uint64 stm_diff = STM_A_Count > STM_B_Count ? (STM_A_Count - STM_B_Count) : (STM_B_Count - STM_A_Count);
+
+        if (stm_diff > 2 * IFX_CFG_STM_TICKS_PER_MS)
+        {
+            repeatNtimes--;
+
+            /* Safety manual recommends an application reset */
+            if (repeatNtimes == 0U)
+            {
+                ebcm_trigger_sw_reset(EBCMResetType_application);
+            }
+        }
+        else
+        {
+            break;
+        }
+
+    }
+}

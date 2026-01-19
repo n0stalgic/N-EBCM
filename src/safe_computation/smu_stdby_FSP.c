@@ -1,10 +1,10 @@
 /******************************************************************************
- * @file    {file_name}
+ * @file    smu_stdby_FSP.c
  * @brief   Add brief here
  *
  * MIT License
  *
- * Copyright (c) 2025 n0stalgic
+ * Copyright (c) 2026 n0stalgic
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -25,37 +25,21 @@
  * SOFTWARE.
  *****************************************************************************/
 
-#ifndef CONFIG_EBCM_CFG_H_
-#define CONFIG_EBCM_CFG_H_
 
 /*********************************************************************************************************************/
 /*-----------------------------------------------------Includes------------------------------------------------------*/
 /*********************************************************************************************************************/
+#include <safe_computation/smu_stdby_FSP.h>
+#include "ebcm_main.h"
 
 /*********************************************************************************************************************/
 /*------------------------------------------------------Macros-------------------------------------------------------*/
 /*********************************************************************************************************************/
-#define EBCM_CFG_SSW_ENABLE_LBIST_BOOT            1
-#define EBCM_CFG_SSW_ENABLE_LBIST_APPSW           1
-#define EBCM_CFG_SSW_ENABLE_MONBIST               1
-#define EBCM_CFG_SSW_ENABLE_MCU_FW_CHECK          1
-#define EBCM_CFG_SSW_ENABLE_MCU_STARTUP           1
-#define EBCM_CFG_SSW_ENABLE_ALIVE_ALARM_TEST      1
-#define EBCM_CFG_SSW_ENABLE_REG_MONITOR_TEST      1
-#define EBCM_CFG_SSW_ENABLE_MBIST                 1
-
-
-#define IFX_CFG_STM_TICKS_PER_MS                  100000  /* brief Number of STM ticks per millisecond */
-
 
 /*********************************************************************************************************************/
 /*-------------------------------------------------Global variables--------------------------------------------------*/
 /*********************************************************************************************************************/
 
-/*********************************************************************************************************************/
-/*-------------------------------------------------Data Structures---------------------------------------------------*/
-/*********************************************************************************************************************/
- 
 /*********************************************************************************************************************/
 /*--------------------------------------------Private Variables/Constants--------------------------------------------*/
 /*********************************************************************************************************************/
@@ -64,5 +48,87 @@
 /*------------------------------------------------Function Prototypes------------------------------------------------*/
 /*********************************************************************************************************************/
 
+/*********************************************************************************************************************/
+/*---------------------------------------------Function Implementations----------------------------------------------*/
+/*********************************************************************************************************************/
 
-#endif /* CONFIG_EBCM_CFG_H_ */
+/*
+ * clear the status bit of stdby_alarm and check if the clear has really been executed
+ */
+SmuStatusType clearBitSMUstdby(AlarmStdbySMU stdbyAlarm)
+{
+    Ifx_PMS_AG_STDBY0 stdbyAG20;
+    Ifx_PMS_AG_STDBY1 stdbyAG21;
+    Ifx_PMS_CMD_STDBY stdbyCMD;
+
+    boolean bool = FALSE;
+
+    /* Clear either an alarm from group 20 or 21 */
+    switch (stdbyAlarm / 32)
+    {
+        case 0 :
+            IfxScuWdt_clearSafetyEndinitInline(IfxScuWdt_getSafetyWatchdogPasswordInline());
+
+            /* Lift write protection for one write access
+             Alarm status clear enabled */
+            stdbyCMD.B.BITPROT = 1;
+            stdbyCMD.B.ASCE = 1;
+
+            /* Applying the configuration to prepare for the bit clear */
+            PMS_CMD_STDBY.U = stdbyCMD.U;
+
+            /* BITPROT read as zero, thus the zero here */
+            stdbyCMD.B.BITPROT = 0;
+            bool = (PMS_CMD_STDBY.U == stdbyCMD.U);
+
+            /* Bit clear */
+            stdbyAG20.U = PMS_AG20_STDBY.U;
+            stdbyAG20.U |= 1 << (stdbyAlarm % 32);
+            PMS_AG20_STDBY.U = stdbyAG20.U;
+
+            /* If the clear has been successful the bit stdby_alarm%32 will be 0 */
+            stdbyAG20.U &= ~(1 << (stdbyAlarm % 32));
+            bool &= (PMS_AG20_STDBY.U == stdbyAG20.U);
+
+            IfxScuWdt_setSafetyEndinitInline(IfxScuWdt_getSafetyWatchdogPasswordInline());
+            break;
+
+        case 1 :
+            IfxScuWdt_clearSafetyEndinitInline(IfxScuWdt_getSafetyWatchdogPasswordInline());
+
+            /* Llift write protection for one write access
+             Alarm status clear enabled */
+            stdbyCMD.B.BITPROT = 1;
+            stdbyCMD.B.ASCE = 1;
+
+            /* Applying the configuration to prepare for the bit clear */
+            PMS_CMD_STDBY.U = stdbyCMD.U;
+
+            /* BITPROT read as zero, thus the zero here */
+            stdbyCMD.B.BITPROT = 0;
+            bool = (PMS_CMD_STDBY.U == stdbyCMD.U);
+
+            /* Bit clear */
+            stdbyAG21.U = PMS_AG21_STDBY.U;
+            stdbyAG21.U |= 1 << (stdbyAlarm % 32);
+            PMS_AG21_STDBY.U = stdbyAG21.U;
+
+            /* If the clear has been successful the bit stdby_alarm%32 will be 0 */
+            stdbyAG21.U &= ~(1 << (stdbyAlarm % 32));
+            bool &= (PMS_AG21_STDBY.U == stdbyAG21.U);
+            IfxScuWdt_setSafetyEndinitInline(IfxScuWdt_getSafetyWatchdogPasswordInline());
+            break;
+
+        default:
+            break;
+    }
+
+    if(bool)
+    {
+        return PASS;
+    }
+    else
+    {
+        return FAIL;
+    }
+}

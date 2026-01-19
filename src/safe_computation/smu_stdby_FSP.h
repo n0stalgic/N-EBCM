@@ -25,13 +25,13 @@
  * SOFTWARE.
  *****************************************************************************/
 
-#ifndef SAFETY_SMU_STDBY_FSP_H_
-#define SAFETY_SMU_STDBY_FSP_H_
+#ifndef SAFE_COMPUTATION_SMU_STDBY_FSP_H_
+#define SAFE_COMPUTATION_SMU_STDBY_FSP_H_
 
 /*********************************************************************************************************************/
 /*-----------------------------------------------------Includes------------------------------------------------------*/
 /*********************************************************************************************************************/
-#include "smu.h"
+#include <safe_computation/smu.h>
 #include "IfxPms_reg.h"
 
 /*********************************************************************************************************************/
@@ -121,4 +121,4 @@ typedef enum
 SmuStatusType clearBitSMUstdby(AlarmStdbySMU stdbyAlarm);
 
 
-#endif /* SAFETY_SMU_STDBY_FSP_H_ */
+#endif /* SAFE_COMPUTATION_SMU_STDBY_FSP_H_ */

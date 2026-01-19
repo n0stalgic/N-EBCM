@@ -1,6 +1,6 @@
 /******************************************************************************
- * @file    smu_stdby_FSP.c
- * @brief   Add brief here
+ * @file    sm_stm.h
+ * @brief   Safety mechanism : System timer module (STM) interface
  *
  * MIT License
  *
@@ -25,12 +25,13 @@
  * SOFTWARE.
  *****************************************************************************/
 
+#ifndef SAFE_COMPUTATION_SM_STM_H_
+#define SAFE_COMPUTATION_SM_STM_H_
 
 /*********************************************************************************************************************/
 /*-----------------------------------------------------Includes------------------------------------------------------*/
 /*********************************************************************************************************************/
-#include "ebcm_main.h"
-#include "smu_stdby_FSP.h"
+#include "IfxCpu.h"
 
 /*********************************************************************************************************************/
 /*------------------------------------------------------Macros-------------------------------------------------------*/
@@ -41,94 +42,16 @@
 /*********************************************************************************************************************/
 
 /*********************************************************************************************************************/
+/*-------------------------------------------------Data Structures---------------------------------------------------*/
+/*********************************************************************************************************************/
+ 
+/*********************************************************************************************************************/
 /*--------------------------------------------Private Variables/Constants--------------------------------------------*/
 /*********************************************************************************************************************/
 
 /*********************************************************************************************************************/
 /*------------------------------------------------Function Prototypes------------------------------------------------*/
 /*********************************************************************************************************************/
+void stm_plausibility_chk(IfxCpu_ResourceCpu cpu_idx);
 
-/*********************************************************************************************************************/
-/*---------------------------------------------Function Implementations----------------------------------------------*/
-/*********************************************************************************************************************/
-
-/*
- * clear the status bit of stdby_alarm and check if the clear has really been executed
- */
-SmuStatusType clearBitSMUstdby(AlarmStdbySMU stdbyAlarm)
-{
-    Ifx_PMS_AG_STDBY0 stdbyAG20;
-    Ifx_PMS_AG_STDBY1 stdbyAG21;
-    Ifx_PMS_CMD_STDBY stdbyCMD;
-
-    boolean bool = FALSE;
-
-    /* Clear either an alarm from group 20 or 21 */
-    switch (stdbyAlarm / 32)
-    {
-        case 0 :
-            IfxScuWdt_clearSafetyEndinitInline(IfxScuWdt_getSafetyWatchdogPasswordInline());
-
-            /* Lift write protection for one write access
-             Alarm status clear enabled */
-            stdbyCMD.B.BITPROT = 1;
-            stdbyCMD.B.ASCE = 1;
-
-            /* Applying the configuration to prepare for the bit clear */
-            PMS_CMD_STDBY.U = stdbyCMD.U;
-
-            /* BITPROT read as zero, thus the zero here */
-            stdbyCMD.B.BITPROT = 0;
-            bool = (PMS_CMD_STDBY.U == stdbyCMD.U);
-
-            /* Bit clear */
-            stdbyAG20.U = PMS_AG20_STDBY.U;
-            stdbyAG20.U |= 1 << (stdbyAlarm % 32);
-            PMS_AG20_STDBY.U = stdbyAG20.U;
-
-            /* If the clear has been successful the bit stdby_alarm%32 will be 0 */
-            stdbyAG20.U &= ~(1 << (stdbyAlarm % 32));
-            bool &= (PMS_AG20_STDBY.U == stdbyAG20.U);
-
-            IfxScuWdt_setSafetyEndinitInline(IfxScuWdt_getSafetyWatchdogPasswordInline());
-            break;
-
-        case 1 :
-            IfxScuWdt_clearSafetyEndinitInline(IfxScuWdt_getSafetyWatchdogPasswordInline());
-
-            /* Llift write protection for one write access
-             Alarm status clear enabled */
-            stdbyCMD.B.BITPROT = 1;
-            stdbyCMD.B.ASCE = 1;
-
-            /* Applying the configuration to prepare for the bit clear */
-            PMS_CMD_STDBY.U = stdbyCMD.U;
-
-            /* BITPROT read as zero, thus the zero here */
-            stdbyCMD.B.BITPROT = 0;
-            bool = (PMS_CMD_STDBY.U == stdbyCMD.U);
-
-            /* Bit clear */
-            stdbyAG21.U = PMS_AG21_STDBY.U;
-            stdbyAG21.U |= 1 << (stdbyAlarm % 32);
-            PMS_AG21_STDBY.U = stdbyAG21.U;
-
-            /* If the clear has been successful the bit stdby_alarm%32 will be 0 */
-            stdbyAG21.U &= ~(1 << (stdbyAlarm % 32));
-            bool &= (PMS_AG21_STDBY.U == stdbyAG21.U);
-            IfxScuWdt_setSafetyEndinitInline(IfxScuWdt_getSafetyWatchdogPasswordInline());
-            break;
-
-        default:
-            break;
-    }
-
-    if(bool)
-    {
-        return PASS;
-    }
-    else
-    {
-        return FAIL;
-    }
-}
+#endif /* SAFE_COMPUTATION_SM_STM_H_ */
