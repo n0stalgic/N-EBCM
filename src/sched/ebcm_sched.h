@@ -1,6 +1,6 @@
 /******************************************************************************
- * @file    {file_name}
- * @brief   Add brief here
+ * @file    sched.h
+ * @brief   Interface for scheduler
  *
  * MIT License
  *
@@ -25,59 +25,110 @@
  * SOFTWARE.
  *****************************************************************************/
 
-#ifndef CONFIG_EBCM_CFG_H_
-#define CONFIG_EBCM_CFG_H_
+#ifndef INC_SCHED_H_
+#define INC_SCHED_H_
 
 /*********************************************************************************************************************/
 /*-----------------------------------------------------Includes------------------------------------------------------*/
 /*********************************************************************************************************************/
 
+#include "Ifx_Types.h"
+#include "IfxStm.h"
+#include "ebcm_wdt.h"
+#include "ebcm_led.h"
+#include "Ifx_Fifo.h"
+
 /*********************************************************************************************************************/
 /*------------------------------------------------------Macros-------------------------------------------------------*/
 /*********************************************************************************************************************/
-#define EBCM_CFG_SSW_ENABLE_LBIST_BOOT            1
-#define EBCM_CFG_SSW_ENABLE_LBIST_APPSW           1
-#define EBCM_CFG_SSW_ENABLE_MONBIST               1
-#define EBCM_CFG_SSW_ENABLE_MCU_FW_CHECK          1
-#define EBCM_CFG_SSW_ENABLE_MCU_STARTUP           1
-#define EBCM_CFG_SSW_ENABLE_ALIVE_ALARM_TEST      1
-#define EBCM_CFG_SSW_ENABLE_REG_MONITOR_TEST      1
-#define EBCM_CFG_SSW_ENABLE_MBIST                 1
 
-/* Number of STM ticks per millisecond */
-#define IFX_CFG_STM_TICKS_PER_MS                  100000
-#define IFX_CFG_STM_TICKS_PER_US                  100
+/*********************************************************************************************************************/
+/*-------------------------------------------------Data Structures---------------------------------------------------*/
+/*********************************************************************************************************************/
 
-#define LED1_EBCM_ALIVE                           &MODULE_P00,5
-#define LED2_ALRM_DETECTED                        &MODULE_P00,6
-
-/* [°C] difference in the redundant die temperature as specified in the safety manual */
-#define MAX_DIE_TEMP_DIFF                        9.0
+typedef struct
+{
+    Ifx_STM             *stm_sfr;
+    IfxStm_CompareConfig stm_config;
+} ebcm_stm_cfg;
 
 
-#define ISR_PRORITY_SMU_ISR_0                    5
-#define ISR_PRORITY_SMU_ISR_1                    6
-#define ISR_PRORITY_SMU_ISR_2                    7
-#define ISR_PRIORITY_OS_TICK                     8       /* Define the tick for the Application */
-#define ISR_PRIORITY_FCE_ER                      13      /* Flexible CRC Engine */
 
+typedef struct
+{
+       uint8 tid;
+       void (*func) (void);
+       const char* func_name;
+       const uint32 period_ms;
+       const uint32 offset_ms;
+       const uint32 wcet_us;
+       uint32 countdown;
+       uint8  enabled;
+
+
+} task_t;
+
+typedef struct
+{
+        task_t task;
+        uint64 start_ticks;
+        uint64 end_ticks;
+        uint64 elapsed_us;
+
+} deadline_violation_report;
 
 
 /*********************************************************************************************************************/
 /*-------------------------------------------------Global variables--------------------------------------------------*/
 /*********************************************************************************************************************/
 
-/*********************************************************************************************************************/
-/*-------------------------------------------------Data Structures---------------------------------------------------*/
-/*********************************************************************************************************************/
- 
+#define OVERRUN_REPORT_BUF_SIZE  8U
+
+extern Ifx_Fifo task_overrun_data_fifos[3U];
+
+
 /*********************************************************************************************************************/
 /*--------------------------------------------Private Variables/Constants--------------------------------------------*/
 /*********************************************************************************************************************/
+#define WDT_TASK_ID       0U
+#define LED_TASK_ID       1U
+#define PLCHK_TASK_ID     2U
+
+
+#define CORE0_TASK_START  0U
+#define CORE0_TASK_END    1U
+
+#define CORE1_TASK_START  2U
+#define CORE1_TASK_END    2U
+
+#define CORE2_TASK_START  3U
+#define CORE2_TASK_END    3U
+
+#define EBCM_TASK_TABLE_END    2U
+
+__attribute__((unused)) static task_t task_table[] =
+{
+        /* ---------------------------- CORE0 TASKS START ---------------------------- */
+        [0] = { WDT_TASK_ID,   ebcm_svc_wdt,         "ebcm_svc_wdt",           1,    0,        10,   1,   TRUE  },
+        [1] = { LED_TASK_ID,   ebcm_led_task,        "ebcm_led",               250,  0,        10,   250, TRUE  },
+
+        /* ---------------------------- CORE1 TASKS START ---------------------------- */
+
+        /* ---------------------------- CORE2 TASKS START ---------------------------- */
+
+        /* ---------------------------- Sentinel ---------------------------- */
+        [EBCM_TASK_TABLE_END] = { 0xFF,    NULL,     "NULL_TASK",              0  ,  0,        0,    FALSE }
+
+
+};
 
 /*********************************************************************************************************************/
 /*------------------------------------------------Function Prototypes------------------------------------------------*/
 /*********************************************************************************************************************/
+void ebcm_sch_init_stm(ebcm_stm_cfg* ebcm_stm, IfxCpu_ResourceCpu cpu_idx);
+void ebcm_sch_run_tasks(IfxCpu_ResourceCpu cpu_id);
+void ebcm_core0_sch_isr(void);
+void ebcm_core1_sch_isr(void);
+void ebcm_core2_sch_isr(void);
 
-
-#endif /* CONFIG_EBCM_CFG_H_ */
+#endif /* INC_SCHED_H_ */

@@ -1,5 +1,5 @@
 /******************************************************************************
- * @file    sched.c
+ * @file    ebcm_hw_init.c
  * @brief   Add brief here
  *
  * MIT License
@@ -29,6 +29,11 @@
 /*********************************************************************************************************************/
 /*-----------------------------------------------------Includes------------------------------------------------------*/
 /*********************************************************************************************************************/
+#include "ebcm_main.h"
+#include "Ifx_Types.h"
+#include "IfxCpu.h"
+#include "ebcm_sched.h"
+#include "ebcm_wdt.h"
 
 /*********************************************************************************************************************/
 /*------------------------------------------------------Macros-------------------------------------------------------*/
@@ -49,3 +54,54 @@
 /*********************************************************************************************************************/
 /*---------------------------------------------Function Implementations----------------------------------------------*/
 /*********************************************************************************************************************/
+
+ void init_ebcm(ebcm_sys_info* ebcm_info, IfxCpu_ResourceCpu cpu_idx)
+{
+    if(cpu_idx == IfxCpu_ResourceCpu_0)
+    {
+        /* Clear RCU flags if it was a cold reset */
+        if (IfxScuRcu_readRawResetStatus() & IFXSCURCU_POWERONRESET_MASK)
+        {
+            /* we had a cold reset, we need to clear the flags */
+            IfxScuRcu_clearColdResetStatus();
+        }
+
+        /* In case of wake up via vext ramp up, we clear the corresponding bit to avoid immediate wake up in case of standby entry */
+        if (PMS_PMSWSTAT2.B.PWRWKP == 1)
+        {
+            uint16 endinitSfty_pw = IfxScuWdt_getSafetyWatchdogPassword();
+            IfxScuWdt_clearSafetyEndinit(endinitSfty_pw);
+            PMS_PMSWSTATCLR.B.PWRWKPCLR = 1;
+            IfxScuWdt_setSafetyEndinit(endinitSfty_pw);
+        }
+    }
+
+    ebcm_info->pll_freq = IfxScuCcu_getPllFrequency();
+    ebcm_info->cpu_freq = IfxScuCcu_getCpuFrequency(cpu_idx);
+    ebcm_info->sys_freq = IfxScuCcu_getSpbFrequency();
+
+    switch (cpu_idx)
+    {
+        case IfxCpu_ResourceCpu_0: ebcm_info->stm_freq = IfxStm_getFrequency(&MODULE_STM0); break;
+        case IfxCpu_ResourceCpu_1: ebcm_info->stm_freq = IfxStm_getFrequency(&MODULE_STM1); break;
+        case IfxCpu_ResourceCpu_2: ebcm_info->stm_freq = IfxStm_getFrequency(&MODULE_STM2); break;
+        default: while(1) __debug(); break;
+    }
+
+    init_leds();
+    init_ebcm_safety_mechanisms();
+
+    // finally, init wdt
+    ebcm_init_wdt(WDT_RELOAD);
+
+    ebcm_status.init_complete = TRUE;
+
+}
+
+ void init_ebcm_safety_mechanisms(void)
+ {
+
+     // TODO: init safety mechanisms here like die temp sensor, FCE, LMU data integrity, CPU data, integrity, etc
+
+     return;
+ }

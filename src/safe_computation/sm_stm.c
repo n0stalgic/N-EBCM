@@ -41,6 +41,8 @@
 #define STM_APP_RESET       0
 #define REPEAT_COUNT        5
 
+#define APP_RESET_ON_STM_PLCHK_FAIL 1
+
 /*********************************************************************************************************************/
 /*-------------------------------------------------Global variables--------------------------------------------------*/
 /*********************************************************************************************************************/
@@ -115,10 +117,14 @@ void stm_plausibility_chk(IfxCpu_ResourceCpu cpu_idx)
         {
             repeatNtimes--;
 
-            /* Safety manual recommends an application reset */
+            /* Safety manual recommends an application reset, but we'll latch an SMU alarm eventually */
             if (repeatNtimes == 0U)
             {
+#if APP_RESET_ON_STM_PLCHK_FAIL
                 ebcm_trigger_sw_reset(EBCMResetType_application);
+#else
+                ;
+#endif
             }
         }
         else

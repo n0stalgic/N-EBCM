@@ -31,8 +31,12 @@
 #include "IfxStdIf_DPipe.h"
 #include "shell.h"
 #include "ebcm_main.h"
+#include "ebcm_sched.h"
 
 extern IfxCpu_syncEvent cpuSyncEvent;
+ebcm_stm_cfg cpu_stm1;
+
+
 
 void core1_main(void)
 {
@@ -46,6 +50,8 @@ void core1_main(void)
     /* Wait for CPU sync event */
     IfxCpu_emitEvent(&cpuSyncEvent);
     IfxCpu_waitEvent(&cpuSyncEvent, 1);
+
+   // ebcm_sch_init_stm(&cpu_stm1,  (IfxCpu_ResourceCpu) IfxCpu_getCoreIndex());
 
     while(1)
     {

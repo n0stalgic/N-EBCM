@@ -45,22 +45,14 @@
 /*------------------------------------------------------Macros-------------------------------------------------------*/
 /*********************************************************************************************************************/
 
-#define SOFT_SMU_ALM_CFG_CHECK          IfxSmu_Alarm_Software_Alarm0
-#define SOFT_SMU_ALM_ADC_BWD            IfxSmu_Alarm_Software_Alarm1    /* not used currently */
-#define SOFT_SMU_ALM_ADC                IfxSmu_Alarm_Software_Alarm2    /* not used currently */
-#define SOFT_SMU_ALM_GTM_ECKL           IfxSmu_Alarm_Software_Alarm3
+#define SOFT_SMU_ALM_CFG_CHECK          IfxSmu_Alarm_Software_Alarm0    /* Configuration check alarm */
+#define SOFT_SMU_ALM_SCHED              IfxSmu_Alarm_Software_Alarm1    /* Scheduler deadline violation alarm */
 #define SOFT_SMU_ALM_GTM_ISR_MON        IfxSmu_Alarm_Software_Alarm4
-#define SOFT_SMU_ALM_SBST               IfxSmu_Alarm_Software_Alarm5
-#define SOFT_SMU_ALM_QSPI_SAFE          IfxSmu_Alarm_Software_Alarm6
-#define SOFT_SMU_ALM_DIGITAL_ACQ_ACT    IfxSmu_Alarm_Software_Alarm7
-#define SOFT_SMU_ALM_DTS                IfxSmu_Alarm_Software_Alarm8
-#define SOFT_SMU_ALM_DMA                IfxSmu_Alarm_Software_Alarm9
+#define SOFT_SMU_ALM_SBST               IfxSmu_Alarm_Software_Alarm5    /* Software self test on NLS-CPU cores */
+#define SOFT_SMU_ALM_DTS                IfxSmu_Alarm_Software_Alarm8    /* Die temperature sensor alarm */
 #define SOFT_SMU_ALM_CPU_MON            IfxSmu_Alarm_Software_Alarm10   /* Cpu monitor  */
-#define SOFT_SMU_ALM_STM                IfxSmu_Alarm_Software_Alarm11   /* compare two stm ticks */
-#define SOFT_SMU_ALM_PFLASH             IfxSmu_Alarm_Software_Alarm12
+#define SOFT_SMU_ALM_STM                IfxSmu_Alarm_Software_Alarm11   /* STM plausibility check alarm */
 #define SOFT_SMU_ALM_TRAP               IfxSmu_Alarm_Software_Alarm13
-#define SOFT_SMU_ALM_PORT_SMs           IfxSmu_Alarm_Software_Alarm14   /* not used currently */
-#define SOFT_SMU_ALM_CLOCK_PLAUS        IfxSmu_Alarm_Software_Alarm15   /* not used currently */
 
 #define USER_ALARM_NUMBER           40
 #define AMOUNT_OF_SMU_ALARMS        (uint16)(IfxSmu_Alarm_XBAR_SOTA_SwapError + 1)

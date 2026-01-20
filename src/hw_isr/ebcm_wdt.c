@@ -1,10 +1,10 @@
 /******************************************************************************
- * @file    {file_name}
+ * @file    abs_wdt.c
  * @brief   Add brief here
  *
  * MIT License
  *
- * Copyright (c) 2025 n0stalgic
+ * Copyright (c) 2026 n0stalgic
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -25,52 +25,22 @@
  * SOFTWARE.
  *****************************************************************************/
 
-#ifndef CONFIG_EBCM_CFG_H_
-#define CONFIG_EBCM_CFG_H_
 
 /*********************************************************************************************************************/
 /*-----------------------------------------------------Includes------------------------------------------------------*/
 /*********************************************************************************************************************/
+#include <ebcm_wdt.h>
+#include "IfxScuWdt.h"
 
 /*********************************************************************************************************************/
 /*------------------------------------------------------Macros-------------------------------------------------------*/
 /*********************************************************************************************************************/
-#define EBCM_CFG_SSW_ENABLE_LBIST_BOOT            1
-#define EBCM_CFG_SSW_ENABLE_LBIST_APPSW           1
-#define EBCM_CFG_SSW_ENABLE_MONBIST               1
-#define EBCM_CFG_SSW_ENABLE_MCU_FW_CHECK          1
-#define EBCM_CFG_SSW_ENABLE_MCU_STARTUP           1
-#define EBCM_CFG_SSW_ENABLE_ALIVE_ALARM_TEST      1
-#define EBCM_CFG_SSW_ENABLE_REG_MONITOR_TEST      1
-#define EBCM_CFG_SSW_ENABLE_MBIST                 1
-
-/* Number of STM ticks per millisecond */
-#define IFX_CFG_STM_TICKS_PER_MS                  100000
-#define IFX_CFG_STM_TICKS_PER_US                  100
-
-#define LED1_EBCM_ALIVE                           &MODULE_P00,5
-#define LED2_ALRM_DETECTED                        &MODULE_P00,6
-
-/* [°C] difference in the redundant die temperature as specified in the safety manual */
-#define MAX_DIE_TEMP_DIFF                        9.0
-
-
-#define ISR_PRORITY_SMU_ISR_0                    5
-#define ISR_PRORITY_SMU_ISR_1                    6
-#define ISR_PRORITY_SMU_ISR_2                    7
-#define ISR_PRIORITY_OS_TICK                     8       /* Define the tick for the Application */
-#define ISR_PRIORITY_FCE_ER                      13      /* Flexible CRC Engine */
-
 
 
 /*********************************************************************************************************************/
 /*-------------------------------------------------Global variables--------------------------------------------------*/
 /*********************************************************************************************************************/
 
-/*********************************************************************************************************************/
-/*-------------------------------------------------Data Structures---------------------------------------------------*/
-/*********************************************************************************************************************/
- 
 /*********************************************************************************************************************/
 /*--------------------------------------------Private Variables/Constants--------------------------------------------*/
 /*********************************************************************************************************************/
@@ -79,5 +49,19 @@
 /*------------------------------------------------Function Prototypes------------------------------------------------*/
 /*********************************************************************************************************************/
 
+/*********************************************************************************************************************/
+/*---------------------------------------------Function Implementations----------------------------------------------*/
+/*********************************************************************************************************************/
+void ebcm_init_wdt(uint16 wdt_reload)
+{
+    IfxScuWdt_disableSafetyWatchdog(IfxScuWdt_getSafetyWatchdogPassword());
 
-#endif /* CONFIG_EBCM_CFG_H_ */
+    IfxScuWdt_changeCpuWatchdogReload(IfxScuWdt_getCpuWatchdogPassword(), wdt_reload);
+    IfxScuWdt_serviceCpuWatchdog(IfxScuWdt_getCpuWatchdogPassword());
+}
+
+void ebcm_svc_wdt(void)
+{
+    IfxScuWdt_serviceCpuWatchdog(IfxScuWdt_getCpuWatchdogPassword());
+}
+

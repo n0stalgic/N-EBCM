@@ -1,10 +1,10 @@
 /******************************************************************************
- * @file    {file_name}
+ * @file    ebcm_led.c
  * @brief   Add brief here
  *
  * MIT License
  *
- * Copyright (c) 2025 n0stalgic
+ * Copyright (c) 2026 n0stalgic
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -25,52 +25,22 @@
  * SOFTWARE.
  *****************************************************************************/
 
-#ifndef CONFIG_EBCM_CFG_H_
-#define CONFIG_EBCM_CFG_H_
 
 /*********************************************************************************************************************/
 /*-----------------------------------------------------Includes------------------------------------------------------*/
 /*********************************************************************************************************************/
+#include "ebcm_cfg.h"
+#include "ebcm_led.h"
+#include "IfxPort.h"
 
 /*********************************************************************************************************************/
 /*------------------------------------------------------Macros-------------------------------------------------------*/
 /*********************************************************************************************************************/
-#define EBCM_CFG_SSW_ENABLE_LBIST_BOOT            1
-#define EBCM_CFG_SSW_ENABLE_LBIST_APPSW           1
-#define EBCM_CFG_SSW_ENABLE_MONBIST               1
-#define EBCM_CFG_SSW_ENABLE_MCU_FW_CHECK          1
-#define EBCM_CFG_SSW_ENABLE_MCU_STARTUP           1
-#define EBCM_CFG_SSW_ENABLE_ALIVE_ALARM_TEST      1
-#define EBCM_CFG_SSW_ENABLE_REG_MONITOR_TEST      1
-#define EBCM_CFG_SSW_ENABLE_MBIST                 1
-
-/* Number of STM ticks per millisecond */
-#define IFX_CFG_STM_TICKS_PER_MS                  100000
-#define IFX_CFG_STM_TICKS_PER_US                  100
-
-#define LED1_EBCM_ALIVE                           &MODULE_P00,5
-#define LED2_ALRM_DETECTED                        &MODULE_P00,6
-
-/* [°C] difference in the redundant die temperature as specified in the safety manual */
-#define MAX_DIE_TEMP_DIFF                        9.0
-
-
-#define ISR_PRORITY_SMU_ISR_0                    5
-#define ISR_PRORITY_SMU_ISR_1                    6
-#define ISR_PRORITY_SMU_ISR_2                    7
-#define ISR_PRIORITY_OS_TICK                     8       /* Define the tick for the Application */
-#define ISR_PRIORITY_FCE_ER                      13      /* Flexible CRC Engine */
-
-
 
 /*********************************************************************************************************************/
 /*-------------------------------------------------Global variables--------------------------------------------------*/
 /*********************************************************************************************************************/
 
-/*********************************************************************************************************************/
-/*-------------------------------------------------Data Structures---------------------------------------------------*/
-/*********************************************************************************************************************/
- 
 /*********************************************************************************************************************/
 /*--------------------------------------------Private Variables/Constants--------------------------------------------*/
 /*********************************************************************************************************************/
@@ -79,5 +49,26 @@
 /*------------------------------------------------Function Prototypes------------------------------------------------*/
 /*********************************************************************************************************************/
 
+/*********************************************************************************************************************/
+/*---------------------------------------------Function Implementations----------------------------------------------*/
+/*********************************************************************************************************************/
 
-#endif /* CONFIG_EBCM_CFG_H_ */
+/* Initialize GPIO pins for LEDs */
+void init_leds(void)
+{
+    /* Initialize GPIO pins for LEDs */
+    IfxPort_setPinMode(&MODULE_P00, EBCM_LED1_BOARD_ALIVE, IfxPort_Mode_outputPushPullGeneral);
+    IfxPort_setPinMode(&MODULE_P00, EBCM_LED2_ABS_ACTIVE, IfxPort_Mode_outputPushPullGeneral);
+
+    /* Turn off all LEDs */
+    IfxPort_setPinState(&MODULE_P00, EBCM_LED1_BOARD_ALIVE, IfxPort_State_low);
+    IfxPort_setPinState(&MODULE_P00, EBCM_LED2_ABS_ACTIVE, IfxPort_State_high);
+}
+
+void ebcm_led_task(void)
+{
+    IfxPort_setPinState(&MODULE_P00, EBCM_LED1_BOARD_ALIVE, IfxPort_State_toggled);
+
+    // add logic here to check if ABS has been reported active/inactive. if state has changed, update LED
+}
+

@@ -46,6 +46,14 @@
 /*-------------------------------------------------Data Structures---------------------------------------------------*/
 /*********************************************************************************************************************/
 
+typedef struct
+{
+    float32 sys_freq;                /**< \brief Actual SPB frequency */
+    float32 cpu_freq;                /**< \brief Actual CPU frequency */
+    float32 pll_freq;                /**< \brief Actual PLL frequency */
+    float32 stm_freq;                /**< \brief Actual STM frequency */
+} ebcm_sys_info;
+
  /* status of EBCM */
 typedef struct
 {
@@ -54,6 +62,7 @@ typedef struct
     boolean                 wakeup_from_stby;
     smu_execution_status_t  smu_status;
     boolean                 unlock_config;
+    boolean                 init_complete;
 
 } ebcm_status_t;
 
@@ -67,8 +76,8 @@ typedef struct
 /*********************************************************************************************************************/
 /*------------------------------------------------Function Prototypes------------------------------------------------*/
 /*********************************************************************************************************************/
- void init_ebcm(void);
- void init_cpu_safety(void);
+ void init_ebcm(ebcm_sys_info* ebcm_info, IfxCpu_ResourceCpu cpu_idx);
+ void init_ebcm_safety_mechanisms(void);
 
 
 #endif /* INC_EBCM_MAIN_H_ */

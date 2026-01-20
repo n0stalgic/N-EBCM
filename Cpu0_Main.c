@@ -41,8 +41,14 @@
 #include "IfxSmu.h"
 #include "IfxSmu_cfg.h"
 #include "ebcm_main.h"
+#include "ebcm_sched.h"
+
+ebcm_stm_cfg cpu_stm0;
+ebcm_sys_info  ebcm_info;
 
 IFX_ALIGN(4) IfxCpu_syncEvent cpuSyncEvent = 0;
+
+
 
 void core0_main(void)
 {
@@ -59,14 +65,15 @@ void core0_main(void)
     if (!ebcm_lockstep_injection_test())
     {
         /* Hang here because lockstep failed */
-        while(1);
+        __debug();
     }
-
-
 
     /* Wait for CPU sync event */
     IfxCpu_emitEvent(&cpuSyncEvent);
     IfxCpu_waitEvent(&cpuSyncEvent, 1);
+
+    init_ebcm(&ebcm_info, IfxCpu_ResourceCpu_0);
+    ebcm_sch_init_stm(&cpu_stm0,  (IfxCpu_ResourceCpu) IfxCpu_getCoreIndex());
 
     while(1)
     {

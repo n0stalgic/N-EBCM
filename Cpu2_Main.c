@@ -31,6 +31,7 @@
 
 extern IfxCpu_syncEvent cpuSyncEvent;
 
+
 int core2_main(void)
 {
     IfxCpu_enableInterrupts();
