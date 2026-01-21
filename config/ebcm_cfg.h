@@ -58,7 +58,8 @@
 #define ISR_PRORITY_SMU_ISR_0                    5
 #define ISR_PRORITY_SMU_ISR_1                    6
 #define ISR_PRORITY_SMU_ISR_2                    7
-#define ISR_PRIORITY_OS_TICK                     8       /* Define the tick for the Application */
+#define ISR_PRIORITY_GPT12_TIMER                 8
+#define ISR_PRIORITY_OS_TICK                     9       /* Define the tick for the Application */
 #define ISR_PRIORITY_FCE_ER                      13      /* Flexible CRC Engine */
 
 

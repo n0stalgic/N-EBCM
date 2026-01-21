@@ -89,10 +89,11 @@
     }
 
     init_leds();
+    ebcm_sch_init_gpt12_monitor();
     init_ebcm_safety_mechanisms();
 
-    // finally, init wdt
     ebcm_init_wdt(WDT_RELOAD);
+
 
     ebcm_status.init_complete = TRUE;
 

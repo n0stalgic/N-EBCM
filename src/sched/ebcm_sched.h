@@ -94,41 +94,15 @@ extern Ifx_Fifo task_overrun_data_fifos[3U];
 #define LED_TASK_ID       1U
 #define PLCHK_TASK_ID     2U
 
-
-#define CORE0_TASK_START  0U
-#define CORE0_TASK_END    1U
-
-#define CORE1_TASK_START  2U
-#define CORE1_TASK_END    2U
-
-#define CORE2_TASK_START  3U
-#define CORE2_TASK_END    3U
-
-#define EBCM_TASK_TABLE_END    2U
-
-__attribute__((unused)) static task_t task_table[] =
-{
-        /* ---------------------------- CORE0 TASKS START ---------------------------- */
-        [0] = { WDT_TASK_ID,   ebcm_svc_wdt,         "ebcm_svc_wdt",           1,    0,        10,   1,   TRUE  },
-        [1] = { LED_TASK_ID,   ebcm_led_task,        "ebcm_led",               250,  0,        10,   250, TRUE  },
-
-        /* ---------------------------- CORE1 TASKS START ---------------------------- */
-
-        /* ---------------------------- CORE2 TASKS START ---------------------------- */
-
-        /* ---------------------------- Sentinel ---------------------------- */
-        [EBCM_TASK_TABLE_END] = { 0xFF,    NULL,     "NULL_TASK",              0  ,  0,        0,    FALSE }
-
-
-};
-
 /*********************************************************************************************************************/
 /*------------------------------------------------Function Prototypes------------------------------------------------*/
 /*********************************************************************************************************************/
+void ebcm_sch_init_gpt12_monitor(void);
 void ebcm_sch_init_stm(ebcm_stm_cfg* ebcm_stm, IfxCpu_ResourceCpu cpu_idx);
 void ebcm_sch_run_tasks(IfxCpu_ResourceCpu cpu_id);
 void ebcm_core0_sch_isr(void);
 void ebcm_core1_sch_isr(void);
 void ebcm_core2_sch_isr(void);
+void ebcm_gpt12_deadline_mon_isr(void);
 
 #endif /* INC_SCHED_H_ */
