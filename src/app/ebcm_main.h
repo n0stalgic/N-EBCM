@@ -63,6 +63,7 @@ typedef struct
     smu_execution_status_t  smu_status;
     boolean                 unlock_config;
     boolean                 init_complete;
+    float32                 die_temp;
 
 } ebcm_status_t;
 

@@ -61,6 +61,7 @@
 #define ISR_PRIORITY_GPT12_TIMER                 8
 #define ISR_PRIORITY_OS_TICK                     9       /* Define the tick for the Application */
 #define ISR_PRIORITY_FCE_ER                      13      /* Flexible CRC Engine */
+#define ISR_PRIORITY_DTS                         14      /* Die Temperature Sensor */
 
 
 

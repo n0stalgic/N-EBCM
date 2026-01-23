@@ -107,8 +107,8 @@ uint32 cpu2_tick_count;
 static task_t task_table[] =
 {
         /* ---------------------------- CORE0 TASKS START ---------------------------- */
-        [0] = { WDT_TASK_ID,   ebcm_svc_wdt,         "ebcm_svc_wdt",           1,    0,        2,   1,   TRUE  },
-        [1] = { LED_TASK_ID,   ebcm_led_task,        "ebcm_led",               250,  0,        20,   250, TRUE  },
+        [0] = { WDT_TASK_ID,   ebcm_svc_wdt,         "ebcm_svc_wdt",           1,    0,        5,   1,   TRUE  },
+        [1] = { LED_TASK_ID,   ebcm_led_task,        "ebcm_led",               10,   0,        4,   10, TRUE  },
 
         /* ---------------------------- CORE1 TASKS START ---------------------------- */
 
@@ -176,7 +176,7 @@ static inline void run_with_unbounded_exec_detection_core1(uint16 reload, void (
 void ebcm_gpt12_deadline_mon_isr(void)
 {
     /* Just toggle an LED for now. We'll set safe electrical outputs here eventually */
-    IfxPort_setPinState(&MODULE_P00, EBCM_LED2_ABS_ACTIVE, IfxPort_State_toggled);
+    IfxPort_setPinState(&MODULE_P00, EBCM_LED2, IfxPort_State_toggled);
 }
 
 void ebcm_sch_run_tasks(IfxCpu_ResourceCpu cpu_id)
@@ -221,7 +221,7 @@ void ebcm_sch_run_tasks(IfxCpu_ResourceCpu cpu_id)
 
             if (target_task->countdown == 0U)
             {
-                target_task->countdown = target_task->period_ms;
+                target_task->countdown  = target_task->period_ms;
 
                 uint64 deadline_usec    = target_task->wcet_us + TASK_DEADLINE_MARGIN_USEC;
 
@@ -235,7 +235,6 @@ void ebcm_sch_run_tasks(IfxCpu_ResourceCpu cpu_id)
                 if (reload64 > 0xFFFFULL) reload64 = 0xFFFFULL;
 
                 uint16 reload = (uint16)reload64;
-
 
                 if (cpu_id == IfxCpu_ResourceCpu_0)
                 {
