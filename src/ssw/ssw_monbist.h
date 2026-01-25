@@ -55,8 +55,8 @@
 /*------------------------------------------------Function Prototypes------------------------------------------------*/
 /*********************************************************************************************************************/
 
-void ebcm_ssw_monbist(void);
-static void ebcm_ssw_monbist_check(void);
+void EbcmSsw_monbist(void);
+static void EbcmSsw_monbistCheck(void);
 
 
 #endif /* INC_SSW_MONBIST_H_ */

@@ -52,15 +52,15 @@
 /*********************************************************************************************************************/
 /*---------------------------------------------Function Implementations----------------------------------------------*/
 /*********************************************************************************************************************/
-void ebcm_init_wdt(uint16 wdt_reload)
+void EbcmHw_initWdt(uint16 wdtReload)
 {
     IfxScuWdt_disableSafetyWatchdog(IfxScuWdt_getSafetyWatchdogPassword());
 
-    IfxScuWdt_changeCpuWatchdogReload(IfxScuWdt_getCpuWatchdogPassword(), wdt_reload);
+    IfxScuWdt_changeCpuWatchdogReload(IfxScuWdt_getCpuWatchdogPassword(), wdtReload);
     IfxScuWdt_serviceCpuWatchdog(IfxScuWdt_getCpuWatchdogPassword());
 }
 
-void ebcm_svc_wdt(void)
+void EbcmHw_svcWdt(void)
 {
     IfxScuWdt_serviceCpuWatchdog(IfxScuWdt_getCpuWatchdogPassword());
 }

@@ -34,7 +34,7 @@
 #include "ebcm_sched.h"
 
 extern IfxCpu_syncEvent cpuSyncEvent;
-ebcm_stm_cfg cpu_stm1;
+EbcmStmCfg cpuStm1;
 
 
 
@@ -51,7 +51,7 @@ void core1_main(void)
     IfxCpu_emitEvent(&cpuSyncEvent);
     IfxCpu_waitEvent(&cpuSyncEvent, 1);
 
-   // ebcm_sch_init_stm(&cpu_stm1,  (IfxCpu_ResourceCpu) IfxCpu_getCoreIndex());
+   // ebcmSchInitStm(&cpuStm1, (IfxCpu_ResourceCpu)IfxCpu_getCoreIndex());
 
     while(1)
     {

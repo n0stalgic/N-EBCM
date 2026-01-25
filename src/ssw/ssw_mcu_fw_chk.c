@@ -47,8 +47,8 @@
 /*-------------------------------------------------Global variables--------------------------------------------------*/
 /*********************************************************************************************************************/
 
-volatile Ifx_SMU_AG ebcm_smu_alarm_status[IFXSMU_NUM_ALARM_GROUPS];
-mcu_fw_check_status_t mcu_fw_check_status;
+volatile Ifx_SMU_AG ebcmSmuAlarmStatus[IFXSMU_NUM_ALARM_GROUPS];
+McuFwCheckStatus mcuFwCheckStatus;
 
 /*********************************************************************************************************************/
 /*--------------------------------------------Private Variables/Constants--------------------------------------------*/
@@ -58,31 +58,31 @@ mcu_fw_check_status_t mcu_fw_check_status;
 /*------------------------------------------------Function Prototypes------------------------------------------------*/
 /*********************************************************************************************************************/
 
-boolean ebcm_fw_check_smu_st_mem_lclcon(const FwCheckStruct *fwCheckTable, const int struct_size,
-        const ebcm_reset_type_t resetType, FwCheckVerificationStruct *fwCheckVerification);
+boolean EbcmSsw_fwCheckSmuStMemLclcon(const FwCheckStruct* fwCheckTable, const int structSize,
+                                  const EbcmResetType resetType, FwCheckVerificationStruct* fwCheckVerification);
 
 
-IfxMtu_MbistSel ebcm_fw_check_ssh(const ebcm_reset_type_t resetType);
-IfxMtu_MbistSel ebcm_fw_check_ssh_registers(const memory_tested_t *sshTable, int tableSize);
-boolean ebcm_fw_check_eval_ram_init(uint16 memoryMask);
-boolean ebcm_fw_check_eval_lmu_init(uint16 memoryMask);
-void ebcm_fw_check_clr_smu_alarms(const FwCheckStruct *fwCheckTable, const int tableSize);
-void ebcm_fw_check_clear_ssh(const ebcm_reset_type_t resetType);
-void ebcm_fw_check_retrigger_check(const ebcm_reset_type_t resetType);
-void clear_fault_status_and_ecc_detection_FSIRAM(void);
-void ebcm_fw_check_clear_reset_status(const ebcm_reset_type_t resetType);
-void ebcm_fw_check_clear_app_and_sys_status(void);
+IfxMtu_MbistSel EbcmSsw_fwCheckSsh(const EbcmResetType resetType);
+IfxMtu_MbistSel EbcmSsw_fwCheckSshRegisters(const MemoryTested* sshTable, int tableSize);
+boolean EbcmSsw_fwCheckEvalRamInit(uint16 memoryMask);
+boolean EbcmSsw_fwCheckEvalLmuInit(uint16 memoryMask);
+void EbcmSsw_fwCheckClrSmuAlarms(const FwCheckStruct* fwCheckTable, const int tableSize);
+void EbcmSsw_fwCheckClearSsh(const EbcmResetType resetType);
+void EbcmSsw_fwCheckRetriggerCheck(const EbcmResetType resetType);
+void EbcmSsw_clearFaultStatusAndEccDetectionFsiram(void);
+void EbcmSsw_fwCheckClearResetStatus(const EbcmResetType resetType);
+void EbcmSsw_fwCheckClearAppAndSysStatus(void);
 
 /*********************************************************************************************************************/
 /*---------------------------------------------Function Implementations----------------------------------------------*/
 /*********************************************************************************************************************/
 
-void ebcm_ssw_mcu_fw_check(void)
+void EbcmSsw_mcuFwCheck(void)
 {
-    mcu_fw_check_status.mcu_fw_check_smu = FALSE;
-    mcu_fw_check_status.mcu_fw_check_scu_stem = FALSE;
-    mcu_fw_check_status.mcu_fw_check_scu_lclcon = FALSE;
-    mcu_fw_check_status.mcu_fw_check_ssh = FALSE;
+    mcuFwCheckStatus.mcuFwCheckSmu = FALSE;
+    mcuFwCheckStatus.mcuFwCheckScuStem = FALSE;
+    mcuFwCheckStatus.mcuFwCheckScuLclcon = FALSE;
+    mcuFwCheckStatus.mcuFwCheckSsh = FALSE;
 
     /* Enable MTU module if not yet enabled
      * MTU is required especially for the check SSH because MTU controls SSH instances */
@@ -93,68 +93,68 @@ void ebcm_ssw_mcu_fw_check(void)
         IfxMtu_enableModule();
     }
     /* Take a snapshot of the SMU alarm registers before executing the FW check */
-    for(uint8 alarmReg = 0; alarmReg < IFXSMU_NUM_ALARM_GROUPS; alarmReg++)
+    for (uint8 alarmReg = 0; alarmReg < IFXSMU_NUM_ALARM_GROUPS; alarmReg++)
     {
-        ebcm_smu_alarm_status[alarmReg].U = MODULE_SMU.AG[alarmReg].U;
+        ebcmSmuAlarmStatus[alarmReg].U = MODULE_SMU.AG[alarmReg].U;
     }
     /* Increment the firmware check execution counter */
     /* Read SMU alarm register values and compare with expected ones (listed in Appendix A of the Safety Manual) */
     /* Note: depending on the device and reset type different register values are expected */
 
     if (TRUE
-            == ebcm_fw_check_smu_st_mem_lclcon(fwCheckSMUTC37A, fwCheckSMUTC37A_size, ebcm_status.reset_code.resetType,
-                    fwCheckVerificationSMU))
+            == EbcmSsw_fwCheckSmuStMemLclcon(fwCheckSMUTC37A, fwCheckSMUTC37ASize, ebcmStatus.resetCode.resetType,
+                                         fwCheckVerificationSMU))
     {
-        mcu_fw_check_status.mcu_fw_check_smu = TRUE;
+        mcuFwCheckStatus.mcuFwCheckSmu = TRUE;
     }
 
     if (TRUE
-            == ebcm_fw_check_smu_st_mem_lclcon(fwCheckSTMEMTC37A, fwCheckSTMEMTC37A_size,
-                    ebcm_status.reset_code.resetType, fwCheckVerificationSTMEM))
+            == EbcmSsw_fwCheckSmuStMemLclcon(fwCheckSTMEMTC37A, fwCheckSTMEMTC37ASize,
+                                         ebcmStatus.resetCode.resetType, fwCheckVerificationSTMEM))
     {
-        mcu_fw_check_status.mcu_fw_check_scu_stem = TRUE;
+        mcuFwCheckStatus.mcuFwCheckScuStem = TRUE;
     }
 
     if (TRUE
-            == ebcm_fw_check_smu_st_mem_lclcon(fwCheckLCLCONTC37A, fwCheckLCLCONTC37A_size,
-                    ebcm_status.reset_code.resetType, fwCheckVerificationLCLCON))
+            == EbcmSsw_fwCheckSmuStMemLclcon(fwCheckLCLCONTC37A, fwCheckLCLCONTC37ASize,
+                                         ebcmStatus.resetCode.resetType, fwCheckVerificationLCLCON))
     {
-        mcu_fw_check_status.mcu_fw_check_scu_lclcon = TRUE;
+        mcuFwCheckStatus.mcuFwCheckScuLclcon = TRUE;
     }
 
-    if (IfxMtu_MbistSel_none == ebcm_fw_check_ssh(ebcm_status.reset_code.resetType))
+    if (IfxMtu_MbistSel_none == EbcmSsw_fwCheckSsh(ebcmStatus.resetCode.resetType))
     {
-        mcu_fw_check_status.mcu_fw_check_ssh = TRUE;
+        mcuFwCheckStatus.mcuFwCheckSsh = TRUE;
     }
 
     /* Verify if all checks have PASSED */
-    if  ((mcu_fw_check_status.mcu_fw_check_smu &&
-          mcu_fw_check_status.mcu_fw_check_scu_stem &&
-          mcu_fw_check_status.mcu_fw_check_scu_lclcon &&
-          mcu_fw_check_status.mcu_fw_check_ssh))
+    if ((mcuFwCheckStatus.mcuFwCheckSmu &&
+         mcuFwCheckStatus.mcuFwCheckScuStem &&
+         mcuFwCheckStatus.mcuFwCheckScuLclcon &&
+         mcuFwCheckStatus.mcuFwCheckSsh))
     {
-        ebcm_status.ssw_status.mcu_fw_chk_status = PASSED;
+        ebcmStatus.sswStatus.mcuFwChkStatus = PASSED;
 
         /* If all registers and SMU alarm registers have reported the expected values .. */
         /* clear the content of the registers mentioned in the Appendix table */
-        ebcm_fw_check_clear_ssh(ebcm_status.reset_code.resetType);
+        EbcmSsw_fwCheckClearSsh(ebcmStatus.resetCode.resetType);
         /* clear the SMU alarms SMU_AG0..11 */
-        ebcm_fw_check_clr_smu_alarms(fwCheckSMUTC37A, fwCheckSMUTC37A_size);
+        EbcmSsw_fwCheckClrSmuAlarms(fwCheckSMUTC37A, fwCheckSMUTC37ASize);
         /* clear the corresponding reset status bits in RSTSTAT register */
-        ebcm_fw_check_clear_reset_status(ebcm_status.reset_code.resetType);
+        EbcmSsw_fwCheckClearResetStatus(ebcmStatus.resetCode.resetType);
     }
 
     else
     {
-        ssw_run_count->mcu_fw_check_fail_count++;
-        ebcm_status.ssw_status.mcu_fw_chk_status = FAILED;
+        sswRunCount->mcuFwCheckFailCount++;
+        ebcmStatus.sswStatus.mcuFwChkStatus = FAILED;
         /* If FW check has FAILED during its first execution trigger the check again */
-        if(ssw_run_count->mcu_fw_check_fail_count < EBCM_MCU_FW_CHECK_MAX_RUNS)
+        if (sswRunCount->mcuFwCheckFailCount < EBCM_MCU_FW_CHECK_MAX_RUNS)
         {
             /* clear the corresponding reset status bits in RSTSTAT register */
-             ebcm_fw_check_clear_reset_status(ebcm_status.reset_code.resetType);
+             EbcmSsw_fwCheckClearResetStatus(ebcmStatus.resetCode.resetType);
             /* Debugger issue : this line needs to be commented during debug state */
-            ebcm_fw_check_retrigger_check(ebcm_status.reset_code.resetType);
+            EbcmSsw_fwCheckRetriggerCheck(ebcmStatus.resetCode.resetType);
         }
     }
 
@@ -176,7 +176,10 @@ void ebcm_ssw_mcu_fw_check(void)
  * const ebcm_reset_type_t resetType => type of the reset
  * FwCheckVerificationStruct *fwCheckVerification => pointer to a structure where the test result will be written into. Can be observed via debugger in case the FW check has FAILED
  * */
-boolean ebcm_fw_check_smu_st_mem_lclcon(const FwCheckStruct *fwCheckTable, const int tableSize, const ebcm_reset_type_t resetType, FwCheckVerificationStruct *fwCheckVerification)
+boolean EbcmSsw_fwCheckSmuStMemLclcon(const FwCheckStruct* fwCheckTable,
+                                  const int tableSize,
+                                  const EbcmResetType resetType,
+                                  FwCheckVerificationStruct* fwCheckVerification)
 {
     boolean fwcheckHasPassed = TRUE;
     uint32 registerValue;
@@ -184,7 +187,7 @@ boolean ebcm_fw_check_smu_st_mem_lclcon(const FwCheckStruct *fwCheckTable, const
 
     /* A pointer to the corresponding FwCheckRegisterCheckStruct inside the fwCheckTable.
      * The corresponding structure of interest depends on the reset type. */
-    const FwCheckRegisterCheckStruct* ptr_register_check_strct;
+    const FwCheckRegisterCheckStruct* ptrRegisterCheckStruct;
 
     /* Iterate through the fwCheckTable */
     for(uint8 i = 0; i < tableSize; i++)
@@ -193,16 +196,16 @@ boolean ebcm_fw_check_smu_st_mem_lclcon(const FwCheckStruct *fwCheckTable, const
         switch(resetType)
         {
             case IfxScuRcu_ResetType_coldpoweron:
-                ptr_register_check_strct = &fwCheckTable[i].coldPORST;
+                ptrRegisterCheckStruct = &fwCheckTable[i].coldPORST;
                 break;
             case IfxScuRcu_ResetType_warmpoweron:
-                ptr_register_check_strct = &fwCheckTable[i].warmPORST;
+                ptrRegisterCheckStruct = &fwCheckTable[i].warmPORST;
                 break;
             case IfxScuRcu_ResetType_system:
-                ptr_register_check_strct = &fwCheckTable[i].systemReset;
+                ptrRegisterCheckStruct = &fwCheckTable[i].systemReset;
                 break;
             case IfxScuRcu_ResetType_application:
-                ptr_register_check_strct = &fwCheckTable[i].applicationReset;
+                ptrRegisterCheckStruct = &fwCheckTable[i].applicationReset;
                 break;
             default:
                 __debug();
@@ -212,9 +215,9 @@ boolean ebcm_fw_check_smu_st_mem_lclcon(const FwCheckStruct *fwCheckTable, const
         /* Read the value of the register which is checked during this iteration */
         registerValue          =   *(volatile uint32 *)fwCheckTable[i].regUnderTest;
         /* Mask the register value in case there are any exceptions. (Refer to the Appendix A of the Safety Manual) */
-        registerValue          &=  ptr_register_check_strct->mask;
+        registerValue          &=  ptrRegisterCheckStruct->mask;
         /* Read the expected register value */
-        expectedRegisterValue =   ptr_register_check_strct->expectedRegVal;
+        expectedRegisterValue =   ptrRegisterCheckStruct->expectedRegVal;
 
         /* Compare the register value with the expected value and write both the test result and the actual
          * register value into the verification structure. */
@@ -234,22 +237,22 @@ boolean ebcm_fw_check_smu_st_mem_lclcon(const FwCheckStruct *fwCheckTable, const
 /*
  * Check the SSH registers and compare with the expected values depending on the reset type
  * */
-IfxMtu_MbistSel ebcm_fw_check_ssh(const ebcm_reset_type_t resetType)
+IfxMtu_MbistSel EbcmSsw_fwCheckSsh(const EbcmResetType resetType)
 {
     IfxMtu_MbistSel fwcheckSshResult;
     switch(resetType)
     {
         case IfxScuRcu_ResetType_coldpoweron:
-            fwcheckSshResult = ebcm_fw_check_ssh_registers (coldPorstSSHTC37A,   coldPorstSSHTC37A_size);
+            fwcheckSshResult = EbcmSsw_fwCheckSshRegisters(coldPorstSSHTC37A, coldPorstSSHTC37ASize);
             break;
         case IfxScuRcu_ResetType_warmpoweron:
-            fwcheckSshResult = ebcm_fw_check_ssh_registers (warmPorstSSHTC37A,   warmPorstSSHTC37A_size);
+            fwcheckSshResult = EbcmSsw_fwCheckSshRegisters(warmPorstSSHTC37A, warmPorstSSHTC37ASize);
             break;
         case IfxScuRcu_ResetType_system:
-            fwcheckSshResult = ebcm_fw_check_ssh_registers (systemSSHTC37A,       systemSSHTC37A_size);
+            fwcheckSshResult = EbcmSsw_fwCheckSshRegisters(systemSSHTC37A, systemSSHTC37ASize);
             break;
         case IfxScuRcu_ResetType_application:
-            fwcheckSshResult = ebcm_fw_check_ssh_registers (applicationSSHTC37A,  applicationSSHTC37A_size);
+            fwcheckSshResult = EbcmSsw_fwCheckSshRegisters(applicationSSHTC37A, applicationSSHTC37ASize);
             break;
         default:
             __debug();
@@ -261,29 +264,29 @@ IfxMtu_MbistSel ebcm_fw_check_ssh(const ebcm_reset_type_t resetType)
 /*
  * Clear SSH register
  * */
-void ebcm_fw_check_clear_ssh(const ebcm_reset_type_t resetType)
+void EbcmSsw_fwCheckClearSsh(const EbcmResetType resetType)
 {
     /* Get pointer to specific table and set variable about the size of this table */
-    const memory_tested_t* sshTable;
+    const MemoryTested* sshTable;
     int tableSize;
 
     switch(resetType)
     {
         case IfxScuRcu_ResetType_coldpoweron:
                 sshTable    = coldPorstSSHTC37A;
-                tableSize  = coldPorstSSHTC37A_size;
+                tableSize  = coldPorstSSHTC37ASize;
             break;
         case IfxScuRcu_ResetType_warmpoweron:
                 sshTable    = warmPorstSSHTC37A;
-                tableSize  = warmPorstSSHTC37A_size;
+                tableSize  = warmPorstSSHTC37ASize;
             break;
         case IfxScuRcu_ResetType_system:
                 sshTable    = systemSSHTC37A;
-                tableSize  = systemSSHTC37A_size;
+                tableSize  = systemSSHTC37ASize;
             break;
         case IfxScuRcu_ResetType_application:
                 sshTable    = applicationSSHTC37A;
-                tableSize  = applicationSSHTC37A_size;
+                tableSize  = applicationSSHTC37ASize;
             break;
         default:
             __debug();
@@ -298,7 +301,7 @@ void ebcm_fw_check_clear_ssh(const ebcm_reset_type_t resetType)
 
     for (a = 0; a < tableSize ; a++ )
     {
-       mbistSel = sshTable[a].ssh_under_test;
+       mbistSel = sshTable[a].sshUnderTest;
 
        mc = &MODULE_MTU.MC[mbistSel];
        mc->ECCD.U = 0x0;
@@ -316,7 +319,7 @@ void ebcm_fw_check_clear_ssh(const ebcm_reset_type_t resetType)
 /*
  * Clear reset application and system reset register
  * */
-void ebcm_fw_check_clear_app_and_sys_status(void)
+void EbcmSsw_fwCheckClearAppAndSysStatus(void)
 {
     uint16         password;
     password = IfxScuWdt_getSafetyWatchdogPassword();
@@ -329,7 +332,7 @@ void ebcm_fw_check_clear_app_and_sys_status(void)
 /*
  * Clear reset status
  * */
-void ebcm_fw_check_clear_reset_status(const ebcm_reset_type_t resetType)
+void EbcmSsw_fwCheckClearResetStatus(const EbcmResetType resetType)
 {
     switch(resetType)
     {
@@ -341,7 +344,7 @@ void ebcm_fw_check_clear_reset_status(const ebcm_reset_type_t resetType)
             break;
         case IfxScuRcu_ResetType_system:
         case IfxScuRcu_ResetType_application:
-            ebcm_fw_check_clear_app_and_sys_status();
+            EbcmSsw_fwCheckClearAppAndSysStatus();
             break;
 
         default:
@@ -357,7 +360,7 @@ void ebcm_fw_check_clear_reset_status(const ebcm_reset_type_t resetType)
  * cleared by the application SW (cf. SM:SYS:MCU_FW_CHECK in Safety Manual) Also, in order to
  * clear the SMU alarms ALM7[1] and ALM7[0], it is necessary to clear the alarms within this MC40.
  * */
-void clear_fault_status_and_ecc_detection_FSIRAM(void)
+void EbcmSsw_clearFaultStatusAndEccDetectionFsiram(void)
 {
     uint16 password = IfxScuWdt_getSafetyWatchdogPassword();
     uint16 *ptrEccd = (uint16 *)(0xF0063810);      /* MCi_ECCD and i = 40 */
@@ -372,10 +375,10 @@ void clear_fault_status_and_ecc_detection_FSIRAM(void)
 /*
  * Check if Smu alarms were cleared
  * */
-void ebcm_fw_check_clr_smu_alarms(const FwCheckStruct *fwCheckTable, const int tableSize)
+void EbcmSsw_fwCheckClrSmuAlarms(const FwCheckStruct* fwCheckTable, const int tableSize)
 {
     uint16 passwd = IfxScuWdt_getSafetyWatchdogPassword();
-    clear_fault_status_and_ecc_detection_FSIRAM();
+    EbcmSsw_clearFaultStatusAndEccDetectionFsiram();
     IfxScuWdt_clearSafetyEndinit(passwd);
 
     /* Iterate through all SMU alarm status registers listed in the fwCheckTable and clear them */
@@ -391,7 +394,7 @@ void ebcm_fw_check_clr_smu_alarms(const FwCheckStruct *fwCheckTable, const int t
 /*
  * Clear SSH and trigger a specific reset depending on incoming reset
  * */
-void ebcm_fw_check_retrigger_check(const ebcm_reset_type_t resetType)
+void EbcmSsw_fwCheckRetriggerCheck(const EbcmResetType resetType)
 {
     /* Initiate the specific reset to trigger an FW check. Note: the reset should be the same type as it was before this FW check execution */
     switch(resetType)
@@ -401,17 +404,17 @@ void ebcm_fw_check_retrigger_check(const ebcm_reset_type_t resetType)
             /* No TLF for this board to trigger cold PORST */
             break;
         case IfxScuRcu_ResetType_warmpoweron:
-            ebcm_fw_check_clear_ssh(resetType);
+            EbcmSsw_fwCheckClearSsh(resetType);
             /* Trigger Warm PORST */
-            ebcm_trigger_warm_porst();
+            EbcmSsw_triggerWarmPorst();
             break;
         case IfxScuRcu_ResetType_system:
-            ebcm_fw_check_clear_ssh(resetType);
-            ebcm_trigger_sw_reset(IfxScuRcu_ResetType_system);
+            EbcmSsw_fwCheckClearSsh(resetType);
+            EbcmSsw_triggerSwReset(IfxScuRcu_ResetType_system);
             break;
         case IfxScuRcu_ResetType_application:
-            ebcm_fw_check_clear_ssh(resetType);
-            ebcm_trigger_sw_reset(IfxScuRcu_ResetType_application);
+            EbcmSsw_fwCheckClearSsh(resetType);
+            EbcmSsw_triggerSwReset(IfxScuRcu_ResetType_application);
             break;
         default:
             __debug();
@@ -422,68 +425,68 @@ void ebcm_fw_check_retrigger_check(const ebcm_reset_type_t resetType)
 /*
  * This function is comparing the SSH registers of all RAMs with their expected values
  * */
-IfxMtu_MbistSel ebcm_fw_check_ssh_registers(const memory_tested_t* sshTable, int tableSize)
+IfxMtu_MbistSel EbcmSsw_fwCheckSshRegisters(const MemoryTested* sshTable, int tableSize)
 {
     IfxMtu_MbistSel mbistSel;
     Ifx_MTU_MC *mc;
     int a;
-    volatile uint16 FAULTSTS_expected_value, ECCD_expected_value, ERRINFO_expected_value;
+    volatile uint16 faultstsExpectedValue, eccdExpectedValue, errinfoExpectedValue;
 
     /* Iterate through all entries in the sshTable */
     for (a = 0; a < tableSize ; a++ )
     {
         /* Get SSH which is tested during this iteration */
-        mbistSel = sshTable[a].ssh_under_test;
+        mbistSel = sshTable[a].sshUnderTest;
         /* Get pointer to MC object of tested SSH */
         mc = &MODULE_MTU.MC[mbistSel];
 
         /* Evaluate which register values are expected for FAULTSTS, ECCD and ERRINFO registers. */
         /* Check which memory type it is and evaluate if the RAM is initialized or not. Depending
          * on this different FAULTSTS values are expected for CPU and LMU memories. */
-        if  ( CPU_MEM_TYPE == sshTable[a].memory_type )
+        if (CPU_MEM_TYPE == sshTable[a].memoryType)
         {
-            if (TRUE == ebcm_fw_check_eval_ram_init(sshTable[a].in_sel_mask) )
+            if (TRUE == EbcmSsw_fwCheckEvalRamInit(sshTable[a].inSelMask))
             {
-                FAULTSTS_expected_value = 0x9;
+                faultstsExpectedValue = 0x9;
             }
             else
             {
-                FAULTSTS_expected_value = 0x1;
+                faultstsExpectedValue = 0x1;
             }
         }
-        else if ( LMU_MEM_TYPE == sshTable[a].memory_type )
+        else if (LMU_MEM_TYPE == sshTable[a].memoryType)
         {
-            if (TRUE == ebcm_fw_check_eval_lmu_init(sshTable[a].in_sel_mask) )
+            if (TRUE == EbcmSsw_fwCheckEvalLmuInit(sshTable[a].inSelMask))
             {
-                FAULTSTS_expected_value = 0x9;
+                faultstsExpectedValue = 0x9;
             }
             else
             {
-                FAULTSTS_expected_value = 0x1;
+                faultstsExpectedValue = 0x1;
             }
         }
         else
         {
-           FAULTSTS_expected_value = sshTable[a].ssh_registers_def.flt_status_val;
+           faultstsExpectedValue = sshTable[a].sshRegistersDef.fltStatusVal;
         }
 
-           ECCD_expected_value     = sshTable[a].ssh_registers_def.eccd_val;
-           ERRINFO_expected_value  = sshTable[a].ssh_registers_def.err_info_val;
+        eccdExpectedValue     = sshTable[a].sshRegistersDef.eccdVal;
+        errinfoExpectedValue  = sshTable[a].sshRegistersDef.errInfoVal;
 
            /* Exception: If AURIX woke up from standby, overwrite expected values with the dedicated standby values. */
-           if(ebcm_status.wakeup_from_stby)
+           if (ebcmStatus.wakeupFromStby)
            {
-               FAULTSTS_expected_value = sshTable[a].ssh_registers_stb.flt_status_val;
-               ECCD_expected_value     = sshTable[a].ssh_registers_stb.eccd_val;
-               ERRINFO_expected_value  = sshTable[a].ssh_registers_stb.err_info_val;
+               faultstsExpectedValue = sshTable[a].sshRegistersStb.fltStatusVal;
+               eccdExpectedValue     = sshTable[a].sshRegistersStb.eccdVal;
+               errinfoExpectedValue  = sshTable[a].sshRegistersStb.errInfoVal;
            }
         {
 
             /* Finally compare register values of selected memory with the expected ones, if any mismatch is
              * detected return the name of the selected memory and stop the function execution. */
-            if (    mc->ECCD.U          != ECCD_expected_value         ||
-                    mc->FAULTSTS.U      != FAULTSTS_expected_value     ||
-                    mc->ERRINFO[0].U    != ERRINFO_expected_value )
+            if (mc->ECCD.U != eccdExpectedValue ||
+                mc->FAULTSTS.U != faultstsExpectedValue ||
+                mc->ERRINFO[0].U != errinfoExpectedValue)
             {
                return (mbistSel);
             }
@@ -496,7 +499,7 @@ IfxMtu_MbistSel ebcm_fw_check_ssh_registers(const memory_tested_t* sshTable, int
 /*
  * Verify if CPU memory is initialized
  * */
-boolean ebcm_fw_check_eval_ram_init(uint16 memoryMask)
+boolean EbcmSsw_fwCheckEvalRamInit(uint16 memoryMask)
 {
     if ( RAM_INIT_AT_COLD_WARM == DMU_HF_PROCONRAM.B.RAMIN ||
          RAM_INIT_AT_COLD_ONLY == DMU_HF_PROCONRAM.B.RAMIN)
@@ -519,7 +522,7 @@ boolean ebcm_fw_check_eval_ram_init(uint16 memoryMask)
 /*
  * Verify if LMU memory is initialized
  * */
-boolean ebcm_fw_check_eval_lmu_init(uint16 memoryMask)
+boolean EbcmSsw_fwCheckEvalLmuInit(uint16 memoryMask)
 {
     if ( RAM_INIT_AT_COLD_WARM == DMU_HF_PROCONRAM.B.RAMIN ||
          RAM_INIT_AT_COLD_ONLY == DMU_HF_PROCONRAM.B.RAMIN)
@@ -542,7 +545,7 @@ boolean ebcm_fw_check_eval_lmu_init(uint16 memoryMask)
 /*
  * This function is to clear all SMU alarms
  * */
-void ebcm_clear_all_smu_alarms(void)
+void EbcmSsw_clearAllSmuAlarms(void)
 {
-    ebcm_fw_check_clr_smu_alarms(fwCheckSMUTC37A, fwCheckSMUTC37A_size);
+    EbcmSsw_fwCheckClrSmuAlarms(fwCheckSMUTC37A, fwCheckSMUTC37ASize);
 }

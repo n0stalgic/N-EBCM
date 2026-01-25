@@ -43,7 +43,7 @@
 /*********************************************************************************************************************/
 /*-------------------------------------------------Global variables--------------------------------------------------*/
 /*********************************************************************************************************************/
-MbistStatus g_MbistStatus;
+MbistStatus gMbistStatus;
 
 /*********************************************************************************************************************/
 /*--------------------------------------------Private Variables/Constants--------------------------------------------*/
@@ -53,7 +53,7 @@ MbistStatus g_MbistStatus;
 /*------------------------------------------------Function Prototypes------------------------------------------------*/
 /*********************************************************************************************************************/
 IFX_EXTERN const IfxMtu_MbistConfig *const mbistGangConfig[];
-void slkClearMbistSshRegisters(void);
+void EbcmSsw_clearMbistSshRegisters(void);
 
 /*********************************************************************************************************************/
 /*---------------------------------------------Function Implementations----------------------------------------------*/
@@ -62,9 +62,9 @@ void slkClearMbistSshRegisters(void);
 /*
  * SM:VMT:MBIST
  * */
-void ebcm_ssw_mbist(void)
+void EbcmSsw_mbist(void)
 {
-    ebcm_status.ssw_status.mbist_status = TEST_NOT_EVAL;
+    ebcmStatus.sswStatus.mbistStatus = TEST_NOT_EVAL;
     /* Note:
      * - "For peripherals SRAMs, it shall be ensured that the module does not access the
      *    SRAM under test" (Refer to UM Non-Destructive Test (NDT) in MTU section) */
@@ -111,20 +111,20 @@ void ebcm_ssw_mbist(void)
     nBistError = IfxMtu_runMbistAll(mbistGangConfig);
 
     /* show correctly in OneEye GUI*/
-    g_MbistStatus.noMbistError = !nBistError;
+    gMbistStatus.noMbistError = !nBistError;
 
     /* check if there was any error */
     if (nBistError == FALSE)
     {
-        ebcm_status.ssw_status.mbist_status = PASSED;
+        ebcmStatus.sswStatus.mbistStatus = PASSED;
     }
     else
     {
-        ebcm_status.ssw_status.mbist_status = FAILED;
+        ebcmStatus.sswStatus.mbistStatus = FAILED;
     }
 
     /* Clear all ECCD and FAULTSTS registers of the tested memory */
-    slkClearMbistSshRegisters();
+    EbcmSsw_clearMbistSshRegisters();
 
     /* Enable DMA module again if it got disabled before */
     if(dmaWasEnabled)
@@ -165,7 +165,7 @@ void ebcm_ssw_mbist(void)
  * boolean IfxMtu_runMbistAll(const IfxMtu_MbistConfig *const mbistConfig[]) and
  * void slkFwCheckClearSSH(SlkResetType resetType)
  * */
-void slkClearMbistSshRegisters(void)
+void EbcmSsw_clearMbistSshRegisters(void)
 {
     IfxMtu_MbistSel mbistSel;
     Ifx_MTU_MC *mc;

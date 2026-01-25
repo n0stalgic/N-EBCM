@@ -33,6 +33,7 @@
 /*********************************************************************************************************************/
 #include <safe_computation/smu.h>
 #include "ssw.h"
+#include "ebcm_dts.h"
 
 /*********************************************************************************************************************/
 /*------------------------------------------------------Macros-------------------------------------------------------*/
@@ -48,28 +49,28 @@
 
 typedef struct
 {
-    float32 sys_freq;                /**< \brief Actual SPB frequency */
-    float32 cpu_freq;                /**< \brief Actual CPU frequency */
-    float32 pll_freq;                /**< \brief Actual PLL frequency */
-    float32 stm_freq;                /**< \brief Actual STM frequency */
-} ebcm_sys_info;
+    float32 sysFreq;                /**< \brief Actual SPB frequency */
+    float32 cpuFreq;                /**< \brief Actual CPU frequency */
+    float32 pllFreq;                /**< \brief Actual PLL frequency */
+    float32 stmFreq;                /**< \brief Actual STM frequency */
+} EbcmSysInfo;
 
  /* status of EBCM */
 typedef struct
 {
-    ssw_status_t            ssw_status;
-    ebcm_reset_code_t       reset_code;
-    boolean                 wakeup_from_stby;
-    smu_execution_status_t  smu_status;
-    boolean                 unlock_config;
-    boolean                 init_complete;
-    float32                 die_temp;
+    SswStatus          sswStatus;
+    EbcmResetCode      resetCode;
+    boolean            wakeupFromStby;
+    SmuExecutionStatus smuStatus;
+    boolean            unlockConfig;
+    boolean            initComplete;
+    DieTempStatusType  dieTempProfile;
 
-} ebcm_status_t;
+} EbcmStatus;
 
- IFX_EXTERN ebcm_status_t  ebcm_status;
+IFX_EXTERN EbcmStatus ebcmStatus;
 
- 
+
 /*********************************************************************************************************************/
 /*--------------------------------------------Private Variables/Constants--------------------------------------------*/
 /*********************************************************************************************************************/
@@ -77,8 +78,8 @@ typedef struct
 /*********************************************************************************************************************/
 /*------------------------------------------------Function Prototypes------------------------------------------------*/
 /*********************************************************************************************************************/
- void init_ebcm(ebcm_sys_info* ebcm_info, IfxCpu_ResourceCpu cpu_idx);
- void init_ebcm_safety_mechanisms(void);
+void EbcmHw_initEbcm(EbcmSysInfo* ebcmInfo, IfxCpu_ResourceCpu cpuIdx);
+void EbcmHw_initEbcmSafetyMechanisms(void);
 
 
 #endif /* INC_EBCM_MAIN_H_ */

@@ -130,14 +130,14 @@ SafetyFfUncorrectableErrorsType safetyFfUncorrectableErrors[NUM_UNCORRECTABLE_ER
 /*---------------------------------------------Function Implementations----------------------------------------------*/
 /*********************************************************************************************************************/
 
-void ebcm_ssw_reg_mon_test(void)
+void EbcmSsw_regMonTest(void)
 {
-    ebcm_status.smu_status.smuSafetyFlipFlopTriggerTestSts = NA;
-    ebcm_status.smu_status.smuSafetyFlipFlopTestResultCheckSts = NA;
-    ebcm_status.smu_status.smuSafetyFlipFlopTestAlarmFlagClearSts = NA;
-    ebcm_status.smu_status.regMonitorTestSmu = NA;
-    ebcm_status.unlock_config = TRUE;
-    ebcm_status.smu_status.unlockConfigRegisterSMU = NA;
+    ebcmStatus.smuStatus.smuSafetyFlipFlopTriggerTestSts = NA;
+    ebcmStatus.smuStatus.smuSafetyFlipFlopTestResultCheckSts = NA;
+    ebcmStatus.smuStatus.smuSafetyFlipFlopTestAlarmFlagClearSts = NA;
+    ebcmStatus.smuStatus.regMonitorTestSmu = NA;
+    ebcmStatus.unlockConfig = TRUE;
+    ebcmStatus.smuStatus.unlockConfigRegisterSMU = NA;
 
     /* Enable all clocks */
     boolean mtuWasEnabled = IfxMtu_isModuleEnabled();
@@ -185,18 +185,18 @@ void ebcm_ssw_reg_mon_test(void)
     }
 
     IfxScuWdt_setCpuEndinit(IfxScuWdt_getCpuWatchdogPassword());
-    ebcm_status.unlock_config &= IfxSmu_unlockConfigRegisters();
-    if (ebcm_status.unlock_config == TRUE)
+    ebcmStatus.unlockConfig &= IfxSmu_unlockConfigRegisters();
+    if (ebcmStatus.unlockConfig == TRUE)
     {
-        ebcm_status.smu_status.unlockConfigRegisterSMU = PASS;
+        ebcmStatus.smuStatus.unlockConfigRegisterSMU = PASS;
     }
     else
     {
-        ebcm_status.smu_status.unlockConfigRegisterSMU = FAIL;
+        ebcmStatus.smuStatus.unlockConfigRegisterSMU = FAIL;
     }
 
-    uint64 t_start, t_execution;
-    float64 t_execution_sec;
+    uint64 tStart, tExecution;
+    float64 tExecutionSec;
 
     boolean smuRegMonTestPassed = TRUE;
 
@@ -219,13 +219,13 @@ void ebcm_ssw_reg_mon_test(void)
         IfxSmu_setRegMonTestModeEnable(testModeEnable);
 
         /* Capture the time */
-        t_start = IfxStm_get(&MODULE_STM0);
+        tStart = IfxStm_get(&MODULE_STM0);
 
         /* Wait for test to complete, and also measure the execution time */
         uint32 timeout = 0xfff;
         do
         {
-            t_execution = IfxStm_get(&MODULE_STM0) - t_start;
+            tExecution = IfxStm_get(&MODULE_STM0) - tStart;
             timeout--;
         }
         while (!(IfxSmu_getRegisterMonitorStatus() & (1U << testModeEnable)) && (timeout > 0));
@@ -234,7 +234,7 @@ void ebcm_ssw_reg_mon_test(void)
         IfxSmu_clearRegMonTestModeEnable(testModeEnable);
 
         /* Convert to seconds */
-        t_execution_sec = t_execution / IfxStm_getFrequency(&MODULE_STM0);
+        tExecutionSec = tExecution / IfxStm_getFrequency(&MODULE_STM0);
 
         /* Check test result */
 
@@ -243,7 +243,7 @@ void ebcm_ssw_reg_mon_test(void)
             smuRegMonTestPassed = FALSE;
         }
 
-        if(t_execution_sec > SMU_REG_MONITOR_TEST_MAX_TIME_SEC)
+        if (tExecutionSec > SMU_REG_MONITOR_TEST_MAX_TIME_SEC)
         {
             smuRegMonTestPassed = FALSE;
         }
@@ -252,12 +252,12 @@ void ebcm_ssw_reg_mon_test(void)
     /* Update system status */
     if (smuRegMonTestPassed == TRUE)
     {
-        ebcm_status.smu_status.smuSafetyFlipFlopTriggerTestSts  = PASS;
-        ebcm_status.smu_status.smuSafetyFlipFlopTestResultCheckSts = PASS;
+        ebcmStatus.smuStatus.smuSafetyFlipFlopTriggerTestSts  = PASS;
+        ebcmStatus.smuStatus.smuSafetyFlipFlopTestResultCheckSts = PASS;
     }
 
     /* Clear all safety flip-flop uncorrectable errors which are raised during the test */
-    boolean alarm_clear_successful = FALSE;
+    boolean alarmClearSuccessful = FALSE;
     SmuStatusType result = PASS;
 
     for(uint8 errorId = 0; errorId < NUM_UNCORRECTABLE_ERRORS; errorId++)
@@ -265,9 +265,9 @@ void ebcm_ssw_reg_mon_test(void)
        if(safetyFfUncorrectableErrors[errorId].smuType == TYPE_SMU_CORE)
        {
            IfxSmu_clearAlarmStatus(safetyFfUncorrectableErrors[errorId].alarmName);
-           if(IfxSmu_getAlarmStatus(safetyFfUncorrectableErrors[errorId].alarmName) == FALSE)
+           if (IfxSmu_getAlarmStatus(safetyFfUncorrectableErrors[errorId].alarmName) == FALSE)
            {
-               alarm_clear_successful = TRUE;
+               alarmClearSuccessful = TRUE;
            }
        }
        else if (safetyFfUncorrectableErrors[errorId].smuType == TYPE_SMU_STDBY)
@@ -280,9 +280,9 @@ void ebcm_ssw_reg_mon_test(void)
     }
 
    /* Set ebcm smu status variable */
-   if((alarm_clear_successful == TRUE) && (result == PASS))
+   if ((alarmClearSuccessful == TRUE) && (result == PASS))
    {
-       ebcm_status.smu_status.smuSafetyFlipFlopTestAlarmFlagClearSts = PASS;
+       ebcmStatus.smuStatus.smuSafetyFlipFlopTestAlarmFlagClearSts = PASS;
    }
 
    /* Lock SMU registers again*/
@@ -317,13 +317,13 @@ void ebcm_ssw_reg_mon_test(void)
    IfxScuWdt_setCpuEndinit(IfxScuWdt_getCpuWatchdogPassword());
 
 
-   if(smuRegMonTestPassed == TRUE)
+   if (smuRegMonTestPassed == TRUE)
    {
-       ebcm_status.smu_status.regMonitorTestSmu = PASS;
+       ebcmStatus.smuStatus.regMonitorTestSmu = PASS;
    }
    else
    {
-       ebcm_status.smu_status.regMonitorTestSmu = FAIL;
+       ebcmStatus.smuStatus.regMonitorTestSmu = FAIL;
    }
 }
 

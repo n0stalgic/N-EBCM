@@ -58,8 +58,8 @@
 /*********************************************************************************************************************/
 
 /* @brief Stores the number of Ssw, Lbist and MCU runs */
-volatile ssw_run_count_t *ssw_run_count = &SSW_STATUS_DATA_ADDRESS;  /* This variable is located in SCR XRAM memory. */
-ssw_monbist_status_t monbist_status;
+volatile SswRunCount* sswRunCount = &SSW_STATUS_DATA_ADDRESS;  /* This variable is located in SCR XRAM memory. */
+SswMonbistStatus monbistStatus;
 
 /*********************************************************************************************************************/
 /*--------------------------------------------Private Variables/Constants--------------------------------------------*/
@@ -69,8 +69,8 @@ ssw_monbist_status_t monbist_status;
 /*------------------------------------------------Function Prototypes------------------------------------------------*/
 /*********************************************************************************************************************/
 
-ebcm_reset_code_t ebcm_eval_reset(void);
-boolean         ebcm_eval_standby(void);
+EbcmResetCode EbcmSsw_evalReset(void);
+boolean EbcmSsw_evalStandby(void);
 
 /*********************************************************************************************************************/
 /*---------------------------------------------Function Implementations----------------------------------------------*/
@@ -81,15 +81,15 @@ boolean         ebcm_eval_standby(void);
  * Note: "In AURIX(TM) TC3xx devices, LBIST execution terminates [..] with a warm reset." but
  * "The Startup Software executed afterwards follows the flow as after cold power-on [..]"
  * */
-void ebcm_trigger_warm_porst(void)
+void EbcmSsw_triggerWarmPorst(void)
 {
-    ebcm_trigger_sw_reset(IfxScuRcu_ResetType_warmpoweron);
+    EbcmSsw_triggerSwReset(IfxScuRcu_ResetType_warmpoweron);
 }
 
 /*
  * This function triggers either a SW Application Reset or a SW System Reset, based on the parameter resetType
  * */
-void ebcm_trigger_sw_reset(ebcm_reset_type_t resetType)
+void EbcmSsw_triggerSwReset(EbcmResetType resetType)
 {
     /* Get the CPU EndInit password */
     uint16 password = IfxScuWdt_getCpuWatchdogPassword();
@@ -108,7 +108,7 @@ void ebcm_trigger_sw_reset(ebcm_reset_type_t resetType)
     IfxScuWdt_setCpuEndinit(password);
 }
 
-const char* ebcm_get_lbist_result_str(ssw_test_status status)
+const char* EbcmSsw_getLbistResultStr(SswTestStatus status)
 {
     switch(status)
     {
@@ -121,41 +121,42 @@ const char* ebcm_get_lbist_result_str(ssw_test_status status)
 
 }
 
-ebcm_reset_code_t ebcm_eval_reset(void)
+EbcmResetCode EbcmSsw_evalReset(void)
 {
-    IfxScuRcu_ResetCode rst_code = IfxScuRcu_evaluateReset();
+    IfxScuRcu_ResetCode rstCode = IfxScuRcu_evaluateReset();
 
     IfxScuRcu_clearColdResetStatus();
 
-    return rst_code;
+    return rstCode;
 }
 
-boolean  ebcm_eval_standby(void)
+boolean EbcmSsw_evalStandby(void)
 {
-    static boolean standby_evaluated   = FALSE;
-    static boolean coming_from_standby = FALSE;
+    static boolean standbyEvaluated   = FALSE;
+    static boolean comingFromStandby = FALSE;
 
-    if (standby_evaluated == FALSE)
+    if (standbyEvaluated == FALSE)
     {
         if ((PMS_PMSWSTAT2.U & PMSWSTAT2_WAKE_UP_FLAGS_MASK) > 0 )
         {
-            uint16 end_init_sfty_pw = IfxScuWdt_getSafetyWatchdogPassword();
-            IfxScuWdt_clearSafetyEndinit(end_init_sfty_pw);
+            uint16 endInitSftyPw = IfxScuWdt_getSafetyWatchdogPassword();
+            IfxScuWdt_clearSafetyEndinit(endInitSftyPw);
             PMS_PMSWSTATCLR.U |= (PMS_PMSWSTAT2.U & PMSWSTAT2_WAKE_UP_FLAGS_MASK);
-            IfxScuWdt_setSafetyEndinit(end_init_sfty_pw);
+            IfxScuWdt_setSafetyEndinit(endInitSftyPw);
 
-            coming_from_standby = TRUE;
+            comingFromStandby = TRUE;
         }
         else
         {
-            coming_from_standby = FALSE;
+            comingFromStandby = FALSE;
         }
     }
 
-    return coming_from_standby;
+    standbyEvaluated = TRUE;
+    return comingFromStandby;
 }
 
-boolean ebcm_lockstep_injection_test(void)
+boolean EbcmSsw_lockstepInjectionTest(void)
 {
     boolean passed = FALSE;
 
@@ -166,20 +167,20 @@ boolean ebcm_lockstep_injection_test(void)
 
 
     /* Read safety management unit lockstep alarm right away */
-    volatile boolean smu_alarm = IfxSmu_getAlarmStatus(IfxSmu_Alarm_CPU0_Lockstep_ComparatorError) &&
-                                            IfxSmu_getAlarmStatus(IfxSmu_Alarm_CPU1_Lockstep_ComparatorError);
+    volatile boolean smuAlarm = IfxSmu_getAlarmStatus(IfxSmu_Alarm_CPU0_Lockstep_ComparatorError) &&
+                                IfxSmu_getAlarmStatus(IfxSmu_Alarm_CPU1_Lockstep_ComparatorError);
     __nop();
     __nop();
 
-    if (smu_alarm)
+    if (smuAlarm)
     {
       passed = TRUE;
       IfxSmu_clearAlarmStatus(IfxSmu_Alarm_CPU0_Lockstep_ComparatorError);
       IfxSmu_clearAlarmStatus(IfxSmu_Alarm_CPU1_Lockstep_ComparatorError);
 
-      smu_alarm = IfxSmu_getAlarmStatus(IfxSmu_Alarm_CPU0_Lockstep_ComparatorError) &&
-                                                  IfxSmu_getAlarmStatus(IfxSmu_Alarm_CPU1_Lockstep_ComparatorError);
-      if (passed && !smu_alarm)
+      smuAlarm = IfxSmu_getAlarmStatus(IfxSmu_Alarm_CPU0_Lockstep_ComparatorError) &&
+                 IfxSmu_getAlarmStatus(IfxSmu_Alarm_CPU1_Lockstep_ComparatorError);
+      if (passed && !smuAlarm)
       {
           passed = TRUE;
       }
@@ -192,41 +193,41 @@ boolean ebcm_lockstep_injection_test(void)
     return passed;
 }
 
-void run_app_sw_startup(void)
+void EbcmSsw_runAppSwStartup(void)
 {
 #if EBCM_CFG_SSW_ENABLE_LBIST_BOOT || EBCM_CFG_SSW_ENABLE_LBIST_APPSW
-   ebcm_ssw_lbist();
+   EbcmSsw_lbist();
 #endif /* EBCM_CFG_SSW_ENABLE_LBIST_BOOT || EBCM_CFG_SSW_ENABLE_LBIST_APPSW */
 
-   ebcm_status.reset_code = ebcm_eval_reset();
-   ebcm_status.wakeup_from_stby = ebcm_eval_standby();
+   ebcmStatus.resetCode = EbcmSsw_evalReset();
+   ebcmStatus.wakeupFromStby = EbcmSsw_evalStandby();
 
 #if EBCM_CFG_SSW_ENABLE_MONBIST
     /* MONBIST Tests and evaluation
      * SMC:PMS:MONBIST_CFG
      * SM:PMS:MONBIST_RESULT
      * */
-    ebcm_ssw_monbist();
+    EbcmSsw_monbist();
 #endif /* SLK_CFG_SSW_ENABLE_MONBIST */
 
 #if EBCM_CFG_SSW_ENABLE_MCU_FW_CHECK
-    ebcm_ssw_mcu_fw_check();
+    EbcmSsw_mcuFwCheck();
 #endif /* EBCM_CFG_SSW_ENABLE_MCU_FW_CHECK */
 
 #if EBCM_CFG_SSW_ENABLE_MCU_STARTUP
-    ebcm_ssw_mcu_startup();
+    EbcmSsw_mcuStartup();
 #endif /* EBCM_CFG_SSW_ENABLE_MCU_STARTUP */
 
 #if EBCM_CFG_SSW_ENABLE_ALIVE_ALARM_TEST
-    ebcm_ssw_alive_alarm_test();
+    EbcmSsw_aliveAlarmTest();
 #endif /* EBCM_CFG_SSW_ENABLE_ALIVE_ALARM_TEST */
 
 #if EBCM_CFG_SSW_ENABLE_REG_MONITOR_TEST
-    ebcm_ssw_reg_mon_test();
+    EbcmSsw_regMonTest();
 #endif /* EBCM_CFG_SSW_ENABLE_REG_MONITOR_TEST */
 
 #if EBCM_CFG_SSW_ENABLE_MBIST
-    ebcm_ssw_mbist();
+    EbcmSsw_mbist();
 #endif /* EBCM_CFG_SSW_ENABLE_REG_MONITOR_TEST */
 
 

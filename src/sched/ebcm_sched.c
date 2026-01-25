@@ -43,6 +43,7 @@
 #include <string.h>
 
 
+
 /*********************************************************************************************************************/
 /*------------------------------------------------------Macros-------------------------------------------------------*/
 /*********************************************************************************************************************/
@@ -50,9 +51,9 @@
 /*********************************************************************************************************************/
 /*-------------------------------------------------Global variables--------------------------------------------------*/
 /*********************************************************************************************************************/
-uint32 cpu0_tick_count;
-uint32 cpu1_tick_count;
-uint32 cpu2_tick_count;
+volatile uint32 cpu0execTaskCounter;
+volatile uint32 cpu1execTaskCounter;
+volatile uint32 cpu2execTaskCounter;
 
 
 /*********************************************************************************************************************/
@@ -80,6 +81,8 @@ uint32 cpu2_tick_count;
 
 #define USEC_PER_SEC               1000000UL
 #define TICK_HZ                    (GPT12_BASE_FREQ_100MHZ / (GPT1_BLOCK_PRESCALER_16 * GPT12_INPUT_PRESCALER_64))
+#define SCHED_P                    GPT1_BLOCK_PRESCALER_16 * GPT12_INPUT_PRESCALER_8
+#define SCHED_DENOM                SCHED_P * 1000000ULL
 #define CONVERT_USEC_TO_HZ(x)      ((USEC_PER_SEC / (x)))
 #define WCET_20_USEC_IN_HZ         50000UL
 
@@ -100,39 +103,46 @@ uint32 cpu2_tick_count;
 #endif
 
 #if (CORE2_TASK_END >= EBCM_TASK_TABLE_END)
-#error "Scheduler task boundary exceeds task_table length!"
+#error "Scheduler task boundary exceeds taskTable length!"
 #endif
 
-
-static task_t task_table[] =
+static Task taskTable[] =
 {
         /* ---------------------------- CORE0 TASKS START ---------------------------- */
-        [0] = { WDT_TASK_ID,   ebcm_svc_wdt,         "ebcm_svc_wdt",           1,    0,        5,   1,   TRUE  },
-        [1] = { LED_TASK_ID,   ebcm_led_task,        "ebcm_led",               10,   0,        4,   10, TRUE  },
+        [TASK_ID_C0_WDT] = { WDT_TASK_ID,   EbcmHw_svcWdt,     "EbcmHw_svcWdt",     1,    0,        5,   1,  0, TRUE  },
+        [TASK_ID_C0_LED] = { LED_TASK_ID,   EbcmHw_ledTask,    "EbcmHw_ledTask",    10,   0,        4,   10, 0, TRUE  },
 
         /* ---------------------------- CORE1 TASKS START ---------------------------- */
 
         /* ---------------------------- CORE2 TASKS START ---------------------------- */
 
         /* ---------------------------- Sentinel ---------------------------- */
-        [EBCM_TASK_TABLE_END] = { 0xFF,    NULL,     "NULL_TASK",              0  ,  0,        0,    FALSE }
+        [TASK_COUNT] = { 0xFF,    NULL,     "NULL_TASK",              0  ,  0,        0,    0, FALSE }
 
 
 };
 
+volatile Task* core0_currentTask;
+volatile Task* core1_currentTask;
 
 
 /*********************************************************************************************************************/
 /*------------------------------------------------Function Prototypes------------------------------------------------*/
 /*********************************************************************************************************************/
 
-IFX_INTERRUPT(ebcm_core0_sch_isr, 0, ISR_PRIORITY_OS_TICK);
-IFX_INTERRUPT(ebcm_gpt12_deadline_mon_isr, 0, ISR_PRIORITY_GPT12_TIMER);
-//IFX_INTERRUPT(ebcm_core1_sch_isr, 1, ISR_PRIORITY_OS_TICK);
-//IFX_INTERRUPT(ebcm_core2_sch_isr, 2, ISR_PRIORITY_OS_TICK);
+IFX_INTERRUPT(ebcmCore0SchIsr, CPU0_VECT_TABLE_ID, ISR_PRIORITY_OS_TICK);
+IFX_INTERRUPT(ebcmCore1SchIsr, CPU1_VECT_TABLE_ID, ISR_PRIORITY_OS_TICK);
+IFX_INTERRUPT(EbcmSch_Gpt12_core0DeadlineTripwireIsr, CPU0_VECT_TABLE_ID, ISR_PRIORITY_GPT12_TIMER);
+IFX_INTERRUPT(EbcmSch_Gpt12_core1DeadlineTripwireIsr, CPU1_VECT_TABLE_ID, ISR_PRIORITY_GPT12_TIMER);
+//IFX_INTERRUPT(ebcmCore2SchIsr, 2, ISR_PRIORITY_OS_TICK);
 
-static inline void run_with_unbounded_exec_detection_core0(uint16 reload, void (*func)(void));
-static inline void run_with_unbounded_exec_detection_core1(uint16 reload, void (*func)(void));
+void ebcmCore0SchIsr(void);
+void ebcmCore1SchIsr(void);
+void ebcmCore2SchIsr(void);
+void ebcmGpt12DeadlineMonIsr(void);
+
+static inline void runWithUnboundedExecDetectionCore0(uint16 reload, void (*func)(void));
+static inline void runWithUnboundedExecDetectionCore1(uint16 reload, void (*func)(void));
 
 
 /*********************************************************************************************************************/
@@ -140,7 +150,25 @@ static inline void run_with_unbounded_exec_detection_core1(uint16 reload, void (
 /*********************************************************************************************************************/
 
 
-static inline void run_with_unbounded_exec_detection_core0(uint16 reload, void (*func)(void))
+static inline boolean isCurrentCoreTaskReady(IfxCpu_ResourceCpu currCore)
+{
+    switch(currCore)
+    {
+        case IfxCpu_ResourceCpu_0: return (cpu0execTaskCounter > 0); break;
+        case IfxCpu_ResourceCpu_1: return (cpu1execTaskCounter > 0); break;
+
+        // maybe latch a software alarm here because something is very wrong.
+        default:
+        {
+            __debug();
+        }
+    }
+
+    return FALSE;
+}
+
+
+static inline void runWithUnboundedExecDetectionCore0(uint16 reload, void (*func)(void))
 {
     IfxGpt12_T3_run(&MODULE_GPT120, IfxGpt12_TimerRun_stop);
     IfxSrc_clearRequest(IfxGpt12_T3_getSrc(&MODULE_GPT120));
@@ -155,7 +183,7 @@ static inline void run_with_unbounded_exec_detection_core0(uint16 reload, void (
     IfxGpt12_T3_run(&MODULE_GPT120, IfxGpt12_TimerRun_stop);
 }
 
-static inline void run_with_unbounded_exec_detection_core1(uint16 reload, void (*func)(void))
+static inline void runWithUnboundedExecDetectionCore1(uint16 reload, void (*func)(void))
 {
     IfxGpt12_T2_run(&MODULE_GPT120, IfxGpt12_TimerRun_stop);
     IfxSrc_clearRequest(IfxGpt12_T2_getSrc(&MODULE_GPT120));
@@ -173,22 +201,40 @@ static inline void run_with_unbounded_exec_detection_core1(uint16 reload, void (
 
 
 #pragma optimize 0
-void ebcm_gpt12_deadline_mon_isr(void)
+void EbcmSch_Gpt12_core0DeadlineTripwireIsr(void)
 {
+
     /* Just toggle an LED for now. We'll set safe electrical outputs here eventually */
     IfxPort_setPinState(&MODULE_P00, EBCM_LED2, IfxPort_State_toggled);
+
+
+
 }
 
-void ebcm_sch_run_tasks(IfxCpu_ResourceCpu cpu_id)
+void EbcmSch_Gpt12_core1DeadlineTripwireIsr(void)
+{
+
+    /* do nothing for now on core 1. for now, may add a special LED pattern to indicate
+     * WCET violation. for the final system, trigger safe outputs
+     */
+    ;
+
+}
+
+void EbcmSch_runTasks(IfxCpu_ResourceCpu cpuId)
 {
 
     /* Run hardware timer plausibility checks */
-    stm_plausibility_chk( cpu_id );
+    stmPlausibilityCheck(cpuId);
 
     uint8 start, end;
     Ifx_STM* stm;
 
-    switch(cpu_id)
+    __disable();
+    boolean isCurrentCoreReady = isCurrentCoreTaskReady(cpuId);
+    __enable();
+
+    switch(cpuId)
     {
         case IfxCpu_ResourceCpu_0:
             start = CORE0_TASK_START;
@@ -209,140 +255,163 @@ void ebcm_sch_run_tasks(IfxCpu_ResourceCpu cpu_id)
             return; /* invalid core */
     }
 
-    for (uint16 t_id = start; t_id <= end; t_id++)
+    if (isCurrentCoreReady == TRUE)
     {
-        task_t* target_task = &task_table[t_id];
-        if (target_task->enabled && target_task->func != NULL)
+        for (uint16 tId = start; tId <= end; tId++)
         {
-            if(target_task->countdown > 0U)
+            Task* targetTask = &taskTable[tId];
+            if (targetTask->enabled && targetTask->func != NULL)
             {
-                target_task->countdown--;
-            }
-
-            if (target_task->countdown == 0U)
-            {
-                target_task->countdown  = target_task->period_ms;
-
-                uint64 deadline_usec    = target_task->wcet_us + TASK_DEADLINE_MARGIN_USEC;
-
-                uint64 P   = (uint64)GPT1_BLOCK_PRESCALER_16 * (uint64)GPT12_INPUT_PRESCALER_8;
-                uint64 den = P * 1000000ULL;                         // P * 1e6
-                uint64 num = (uint64)deadline_usec * (uint64)GPT12_BASE_FREQ_100MHZ;
-
-                uint64 reload64 = (num + den - 1ULL) / den;          // ceil(num/den)
-
-                if (reload64 == 0ULL) reload64 = 1ULL;
-                if (reload64 > 0xFFFFULL) reload64 = 0xFFFFULL;
-
-                uint16 reload = (uint16)reload64;
-
-                if (cpu_id == IfxCpu_ResourceCpu_0)
+                if (targetTask->countdown > 0U)
                 {
-                    run_with_unbounded_exec_detection_core0(reload, target_task->func);
+                    targetTask->countdown--;
                 }
 
-                else if (cpu_id == IfxCpu_ResourceCpu_1)
+                if (targetTask->countdown == 0U)
                 {
-                    run_with_unbounded_exec_detection_core1(reload, target_task->func);
+                    targetTask->countdown  = targetTask->periodMs;
+
+                    if (cpuId == IfxCpu_ResourceCpu_0)
+                    {
+                        runWithUnboundedExecDetectionCore0(targetTask->deadlineGuardReload, targetTask->func);
+                    }
+
+                    else if (cpuId == IfxCpu_ResourceCpu_1)
+                    {
+                        runWithUnboundedExecDetectionCore1(targetTask->deadlineGuardReload, targetTask->func);
+                    }
                 }
             }
         }
     }
+
+    /* in a less stringent scheduler setup, you could make the flag(s) an actual counter, run tasks and decrement it
+     * until it hits zero to allow the scheduler to run until its caught up on overruns. however,
+     * if the scheduler has overrun that badly, we consider ourselves in a non-safe state. if a task overruns,
+     * put the whole system into a safe-state, no chance for scheduler recovery.
+     */
+
+    __disable();
+    if (cpu0execTaskCounter > 0 && cpuId == IfxCpu_ResourceCpu_0)
+    {
+        cpu0execTaskCounter--;
+    }
+
+    if (cpu1execTaskCounter > 0 && cpuId == IfxCpu_ResourceCpu_1)
+    {
+        cpu1execTaskCounter--;
+    }
+    __enable();
 }
 
 #pragma endoptimize
 
 
-void ebcm_core0_sch_isr(void)
+void ebcmCore0SchIsr(void)
 {
     /* Set next 1ms scheduler tick alarm */
     IfxStm_increaseCompare(&MODULE_STM0, IfxStm_Comparator_0, IFX_CFG_STM_TICKS_PER_MS);
 
-    /* Increment the ms value */
-    cpu0_tick_count++;
+    if (cpu0execTaskCounter >= 1)
+    {
+        /* FRAME OVERRUN. trigger an NMI or software alarm and enter a safe state */
+        ;
+    }
+    else
+    {
+        cpu0execTaskCounter++;
+    }
 
-    /* Enable the global interrupts of this CPU */
-    IfxCpu_enableInterrupts();
-
-    /* possibly latch alarm here if scheduler is called before system is fully init'd */
-
-
-    /* Execute the main task scheduler */
-    ebcm_sch_run_tasks((IfxCpu_ResourceCpu) IfxCpu_getCoreIndex());
 }
 
-void ebcm_core1_sch_isr(void)
+void ebcmCore1SchIsr(void)
 {
     /* Set next 1ms scheduler tick alarm */
     IfxStm_increaseCompare(&MODULE_STM1, IfxStm_Comparator_0, IFX_CFG_STM_TICKS_PER_MS);
 
-    /* Increment the ms value */
-    cpu1_tick_count++;
+    if (cpu1execTaskCounter >= 1)
+    {
+        /* FRAME OVERRUN. trigger an NMI or software alarm and enter a safe state */
+        ;
+    }
+    else
+    {
+        cpu1execTaskCounter++;
+    }
 
-    /* Enable the global interrupts of this CPU */
-    IfxCpu_enableInterrupts();
-
-    /* possibly latch alarm here if scheduler is called before system is fully init'd */
-
-    /* Execute the main task scheduler */
-    ebcm_sch_run_tasks((IfxCpu_ResourceCpu) IfxCpu_getCoreIndex());
 }
 
-void ebcm_core2_sch_isr(void)
+void ebcmCore2SchIsr(void)
 {
     /* Set next 1ms scheduler tick alarm */
     IfxStm_increaseCompare(&MODULE_STM2, IfxStm_Comparator_0, IFX_CFG_STM_TICKS_PER_MS);
 
-    /* Increment the ms value */
-    cpu2_tick_count++;
+    if (cpu1execTaskCounter >= 1)
+    {
+        /* FRAME OVERRUN. trigger an NMI or software alarm and enter a safe state */
+        ;
+    }
+    else
+    {
+        cpu2execTaskCounter++;
+    }
 
-    /* Enable the global interrupts of this CPU */
-    IfxCpu_enableInterrupts();
-
-    /* possibly latch alarm here if scheduler is called before system is fully init'd */
-
-    /* Execute the main task scheduler */
-    ebcm_sch_run_tasks((IfxCpu_ResourceCpu) IfxCpu_getCoreIndex());
 }
 
-void ebcm_sch_init_stm(ebcm_stm_cfg* ebcm_stm, IfxCpu_ResourceCpu cpu_idx)
+void EbcmSch_InitStm(EbcmStmCfg* ebcmStm, IfxCpu_ResourceCpu cpuIdx)
 {
 
-    cpu0_tick_count = 0;
-    cpu1_tick_count = 0;
-    cpu2_tick_count = 0;
+    cpu0execTaskCounter = FALSE;
+    cpu1execTaskCounter = FALSE;
+    cpu2execTaskCounter = FALSE;
 
     /* Disable interrupts */
     IfxCpu_disableInterrupts();
 
-    /* Initialize configuration-structure with defaults. */
-    IfxStm_initCompareConfig(&ebcm_stm->stm_config);
+    for (uint8 t_id = 0; t_id < EBCM_TASK_TABLE_END; ++t_id)
+    {
+        Task *targetTask = &taskTable[t_id];
+        /* Pre-calculate all task deadline guardian timer reloads */
+        uint64 deadlineUsec    = targetTask->wcetUs + TASK_DEADLINE_MARGIN_USEC;
 
-    switch(cpu_idx)
+        // SCHED_P * 1e6
+        uint64 num = (uint64)deadlineUsec * (uint64)GPT12_BASE_FREQ_100MHZ;
+
+        uint64 reload64 = (num + ((uint64) SCHED_DENOM) - 1ULL) / SCHED_DENOM;          // ceil(num/den)
+
+        if (reload64 == 0ULL) reload64 = 1ULL;
+        if (reload64 > 0xFFFFULL) reload64 = 0xFFFFULL;
+
+        uint16 reload = (uint16)reload64;
+
+        targetTask->deadlineGuardReload = reload;
+    }
+
+
+    /* Initialize configuration-structure with defaults. */
+    IfxStm_initCompareConfig(&ebcmStm->stmConfig);
+
+    switch(cpuIdx)
     {
         case IfxCpu_ResourceCpu_0:
-            ebcm_stm->stm_sfr = &MODULE_STM0;
-            ebcm_stm->stm_config.typeOfService = IfxSrc_Tos_cpu0;
-            ebcm_stm->stm_config.triggerPriority = ISR_PRIORITY_OS_TICK;
-            memset(&task_overrun_data_fifos[0], 0, sizeof(task_overrun_data_fifos[0]) / sizeof(deadline_violation_report));
-            Ifx_Fifo_init(&task_overrun_data_fifos[0], OVERRUN_REPORT_BUF_SIZE, sizeof(deadline_violation_report));
+            ebcmStm->stmSfr = &MODULE_STM0;
+            ebcmStm->stmConfig.typeOfService = IfxSrc_Tos_cpu0;
+            ebcmStm->stmConfig.triggerPriority = ISR_PRIORITY_OS_TICK;
+            memset(&taskOverrunDataFifos[0], 0, sizeof(taskOverrunDataFifos[0]) / sizeof(DeadlineViolationReport));
             break;
 
         case IfxCpu_ResourceCpu_1:
-            ebcm_stm->stm_sfr = &MODULE_STM1;
-            ebcm_stm->stm_config.typeOfService = IfxSrc_Tos_cpu1;
-            ebcm_stm->stm_config.triggerPriority = ISR_PRIORITY_OS_TICK;
-            memset(&task_overrun_data_fifos[1], 0, sizeof(task_overrun_data_fifos[1]) / sizeof(deadline_violation_report));
-            Ifx_Fifo_init(&task_overrun_data_fifos[1], OVERRUN_REPORT_BUF_SIZE, sizeof(deadline_violation_report));
-
+            ebcmStm->stmSfr = &MODULE_STM1;
+            ebcmStm->stmConfig.typeOfService = IfxSrc_Tos_cpu1;
+            ebcmStm->stmConfig.triggerPriority = ISR_PRIORITY_OS_TICK;
+            memset(&taskOverrunDataFifos[1], 0, sizeof(taskOverrunDataFifos[1]) / sizeof(DeadlineViolationReport));
             break;
-        case IfxCpu_ResourceCpu_2:
-            ebcm_stm->stm_sfr = &MODULE_STM2;
-            ebcm_stm->stm_config.typeOfService = IfxSrc_Tos_cpu2;
-            ebcm_stm->stm_config.triggerPriority = ISR_PRIORITY_OS_TICK;
-            memset(&task_overrun_data_fifos[2], 0, sizeof(task_overrun_data_fifos[2]) / sizeof(deadline_violation_report));
-            Ifx_Fifo_init(&task_overrun_data_fifos[2], OVERRUN_REPORT_BUF_SIZE, sizeof(deadline_violation_report));
 
+        case IfxCpu_ResourceCpu_2:
+            ebcmStm->stmSfr = &MODULE_STM2;
+            ebcmStm->stmConfig.typeOfService = IfxSrc_Tos_cpu2;
+            ebcmStm->stmConfig.triggerPriority = ISR_PRIORITY_OS_TICK;
+            memset(&taskOverrunDataFifos[2], 0, sizeof(taskOverrunDataFifos[2]) / sizeof(DeadlineViolationReport));
             break;
 
         default:
@@ -355,21 +424,21 @@ void ebcm_sch_init_stm(ebcm_stm_cfg* ebcm_stm, IfxCpu_ResourceCpu cpu_idx)
 
     }
 
-    ebcm_stm->stm_config.comparatorInterrupt = IfxStm_ComparatorInterrupt_ir0;
-    ebcm_stm->stm_config.ticks               = IfxStm_getTicksFromMilliseconds(ebcm_stm->stm_sfr, 1U);
+    ebcmStm->stmConfig.comparatorInterrupt = IfxStm_ComparatorInterrupt_ir0;
+    ebcmStm->stmConfig.ticks               = IfxStm_getTicksFromMilliseconds(ebcmStm->stmSfr, 1U);
 
     /* Suspend if debugger attaches */
-    IfxStm_enableOcdsSuspend(ebcm_stm->stm_sfr);
+    IfxStm_enableOcdsSuspend(ebcmStm->stmSfr);
 
     /* Now Initialize the comparator */
-    IfxStm_initCompare(ebcm_stm->stm_sfr, &ebcm_stm->stm_config);
+    IfxStm_initCompare(ebcmStm->stmSfr, &ebcmStm->stmConfig);
 
     /* Enable interrupts again */
     IfxCpu_restoreInterrupts(TRUE);
 }
 
 
-void ebcm_sch_init_gpt12_monitor(void)
+void EbcmSch_initGpt12_monitor(void)
 {
     IfxGpt12_enableModule(&MODULE_GPT120);
     IfxGpt12_setGpt1BlockPrescaler(&MODULE_GPT120, IfxGpt12_Gpt1BlockPrescaler_16);
@@ -377,15 +446,20 @@ void ebcm_sch_init_gpt12_monitor(void)
     /* Initialize core Timer T3 for core 0  */
     IfxGpt12_T3_setMode(&MODULE_GPT120, IfxGpt12_Mode_timer);                       /* Set T3 to timer mode         */
     IfxGpt12_T3_setTimerDirection(&MODULE_GPT120, IfxGpt12_TimerDirection_down);    /* Set T3 count direction       */
-    IfxGpt12_T3_setTimerPrescaler(&MODULE_GPT120, IfxGpt12_TimerInputPrescaler_16); /* Set T3 input prescaler       */
+    IfxGpt12_T3_setTimerPrescaler(&MODULE_GPT120, IfxGpt12_TimerInputPrescaler_8);  /* Set T3 input prescaler       */
 
     /* Initialize auxiliary Timer T2 for core 1  */
     IfxGpt12_T2_setMode(&MODULE_GPT120, IfxGpt12_Mode_timer);                       /* Set T2 to timer mode         */
     IfxGpt12_T2_setTimerDirection(&MODULE_GPT120, IfxGpt12_TimerDirection_down);    /* Set T2 count direction       */
-    IfxGpt12_T2_setTimerPrescaler(&MODULE_GPT120, IfxGpt12_TimerInputPrescaler_16); /* Set T2 input prescaler       */
+    IfxGpt12_T2_setTimerPrescaler(&MODULE_GPT120, IfxGpt12_TimerInputPrescaler_8);  /* Set T2 input prescaler       */
 
     /* Initialize the interrupt */
-    volatile Ifx_SRC_SRCR *src = IfxGpt12_T3_getSrc(&MODULE_GPT120);                /* Get the interrupt address    */
-    IfxSrc_init(src, IfxSrc_Tos_cpu0 , ISR_PRIORITY_GPT12_TIMER);                   /* Initialize service request   */
-    IfxSrc_enable(src);                                                             /* Enable GPT12 interrupt       */
+    volatile Ifx_SRC_SRCR *src0 = IfxGpt12_T3_getSrc(&MODULE_GPT120);               /* Get the interrupt address    */
+    volatile Ifx_SRC_SRCR *src1 = IfxGpt12_T2_getSrc(&MODULE_GPT120);
+    IfxSrc_init(src0, IfxSrc_Tos_cpu0 , ISR_PRIORITY_GPT12_TIMER);                   /* Initialize service request   */
+    IfxSrc_init(src1, IfxSrc_Tos_cpu1 , ISR_PRIORITY_GPT12_TIMER);                   /* Initialize service request   */
+
+
+    IfxSrc_enable(src0);                                                             /* Enable GPT12 interrupt       */
+    IfxSrc_enable(src1);                                                             /* Enable GPT12 interrupt       */
 }

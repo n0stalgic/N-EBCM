@@ -67,12 +67,63 @@
 /*********************************************************************************************************************/
 /*-------------------------------------------------Data Structures---------------------------------------------------*/
 /*********************************************************************************************************************/
+
+typedef enum
+{
+    SmuSR0       = 1,
+    SmuSR1       = 2,
+    SmuSR0SR1    = 3,
+    SmuSR2       = 4,
+    SmuSR0SR2    = 5,
+    SmuSR1SR2    = 6,
+    SmuSR0SR1SR2 = 7,
+    SmuNAN       = 8,
+} SmuSR;
+
 typedef enum
 {
     FAIL   = 0,
     PASS   = 1,
     NA     = 2
 } SmuStatusType;
+
+typedef enum
+{
+    notPending = 0,
+    pending    = 1,
+} AlarmStateSMU;
+
+/* Holds the config of an alarm */
+typedef struct
+{
+    IfxSmu_Alarm                alarm;
+    IfxSmu_InternalAlarmAction  alarmReaction;
+    boolean                     externalReactionEnabled;
+    boolean                     triggerRecoveryTimer;
+    void                        (*alarmDetectionCallback)(void);
+} AlarmConfigStruct;
+
+
+/* Bind an IGCS reaction with its config */
+typedef struct {
+    IfxSmu_InternalAlarmAction  igcs_id;
+    SmuSR                      igcs_config;
+} IGCSisrBindingStruct;
+
+
+/* Store the state of an user configured alarm with its config (const) */
+typedef struct {
+    const AlarmConfigStruct*  alarmConfig;
+    AlarmStateSMU             alarmState;
+} RuntimeAlarmHandle;
+
+
+/* Hold records of all the alarm raised */
+typedef struct
+{
+    RuntimeAlarmHandle  *lastAlarmRaised[USER_ALARM_NUMBER];
+    uint16              alarmCounter;
+} SmuAlarmPendingType;
 
 /* Store function execution status */
 typedef struct
@@ -97,8 +148,8 @@ typedef struct
     SmuStatusType smuSafetyFlipFlopTestAlarmFlagClearSts;
     SmuStatusType smuRecoveryTimerConfigSts;
     SmuStatusType smuCoreSWAlarmTriggerSts;
-} smu_execution_status_t;
- 
+} SmuExecutionStatus;
+
 /*********************************************************************************************************************/
 /*--------------------------------------------Private Variables/Constants--------------------------------------------*/
 /*********************************************************************************************************************/
@@ -106,6 +157,6 @@ typedef struct
 /*********************************************************************************************************************/
 /*------------------------------------------------Function Prototypes------------------------------------------------*/
 /*********************************************************************************************************************/
-
+void EbcmSfty_initSmu(void);
 
 #endif /* SAFE_COMPUTATION_SMU_H_ */

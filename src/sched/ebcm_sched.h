@@ -48,34 +48,42 @@
 
 typedef struct
 {
-    Ifx_STM             *stm_sfr;
-    IfxStm_CompareConfig stm_config;
-} ebcm_stm_cfg;
+    Ifx_STM* stmSfr;
+    IfxStm_CompareConfig stmConfig;
+} EbcmStmCfg;
 
+typedef enum
+{
+    TASK_ID_C0_WDT = 0,
+    TASK_ID_C0_LED,
+
+    TASK_COUNT
+} taskId;
 
 
 typedef struct
 {
-       uint8 tid;
+       taskId tid;
        void (*func) (void);
-       const char* func_name;
-       const uint32 period_ms;
-       const uint32 offset_ms;
-       const uint32 wcet_us;
+       const char* funcName;
+       const uint32 periodMs;
+       const uint32 offsetMs;
+       const uint32 wcetUs;
        uint32 countdown;
+       uint16 deadlineGuardReload;
        uint8  enabled;
 
 
-} task_t;
+} Task;
 
 typedef struct
 {
-        task_t task;
-        uint64 start_ticks;
-        uint64 end_ticks;
-        uint64 elapsed_us;
+        Task task;
+        uint64 startTicks;
+        uint64 endTicks;
+        uint64 elapsedUs;
 
-} deadline_violation_report;
+} DeadlineViolationReport;
 
 
 /*********************************************************************************************************************/
@@ -84,7 +92,7 @@ typedef struct
 
 #define OVERRUN_REPORT_BUF_SIZE  8U
 
-extern Ifx_Fifo task_overrun_data_fifos[3U];
+extern Ifx_Fifo taskOverrunDataFifos[3U];
 
 
 /*********************************************************************************************************************/
@@ -97,12 +105,9 @@ extern Ifx_Fifo task_overrun_data_fifos[3U];
 /*********************************************************************************************************************/
 /*------------------------------------------------Function Prototypes------------------------------------------------*/
 /*********************************************************************************************************************/
-void ebcm_sch_init_gpt12_monitor(void);
-void ebcm_sch_init_stm(ebcm_stm_cfg* ebcm_stm, IfxCpu_ResourceCpu cpu_idx);
-void ebcm_sch_run_tasks(IfxCpu_ResourceCpu cpu_id);
-void ebcm_core0_sch_isr(void);
-void ebcm_core1_sch_isr(void);
-void ebcm_core2_sch_isr(void);
-void ebcm_gpt12_deadline_mon_isr(void);
+void EbcmSch_initGpt12_monitor(void);
+void EbcmSch_InitStm(EbcmStmCfg* ebcmStm, IfxCpu_ResourceCpu cpuIdx);
+void EbcmSch_runTasks(IfxCpu_ResourceCpu cpuId);
+
 
 #endif /* INC_SCHED_H_ */

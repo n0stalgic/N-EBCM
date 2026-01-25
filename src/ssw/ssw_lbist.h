@@ -49,13 +49,13 @@
 
 typedef struct
 {
-        ssw_test_status LBIST_not_term_by_porst;
-        ssw_test_status LBIST_term_ok;
-        ssw_test_status LBIST_test_done;
-        ssw_test_status dev_not_defect;
-} LBIST_status_t;
+    SswTestStatus lbistNotTermByPorst;
+    SswTestStatus lbistTermOk;
+    SswTestStatus lbistTestDone;
+    SswTestStatus devNotDefect;
+} LbistStatus;
 
-IFX_EXTERN LBIST_status_t LBIST_status;
+IFX_EXTERN LbistStatus lbistStatus;
 
  
 /*********************************************************************************************************************/
@@ -66,6 +66,6 @@ IFX_EXTERN LBIST_status_t LBIST_status;
 /*------------------------------------------------Function Prototypes------------------------------------------------*/
 /*********************************************************************************************************************/
 
-void ebcm_ssw_lbist(void);
+void EbcmSsw_lbist(void);
 
 #endif /* INC_SSW_LBIST_H_ */

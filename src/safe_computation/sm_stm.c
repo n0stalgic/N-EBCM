@@ -54,25 +54,25 @@
 /*********************************************************************************************************************/
 /*------------------------------------------------Function Prototypes------------------------------------------------*/
 /*********************************************************************************************************************/
-boolean check_for_disabled_stm(void);
+boolean checkForDisabledStm(void);
 
 /*********************************************************************************************************************/
 /*---------------------------------------------Function Implementations----------------------------------------------*/
 /*********************************************************************************************************************/
 
-boolean check_for_disabled_stm(void)
+boolean checkForDisabledStm(void)
 {
-    boolean is_an_stm_disabled = (MODULE_STM0.CLC.B.DISS == 1 ||
-                                      MODULE_STM1.CLC.B.DISS == 1 ||
-                                          MODULE_STM2.CLC.B.DISS == 1);
+    boolean isAnStmDisabled = (MODULE_STM0.CLC.B.DISS == 1 ||
+                              MODULE_STM1.CLC.B.DISS == 1 ||
+                              MODULE_STM2.CLC.B.DISS == 1);
 
-    return is_an_stm_disabled;
+    return isAnStmDisabled;
 }
 
-void stm_plausibility_chk(IfxCpu_ResourceCpu cpu_idx)
+void stmPlausibilityCheck(IfxCpu_ResourceCpu cpuIdx)
 {
     /* Only do STM monitoring if all STM modules are enabled */
-    if (check_for_disabled_stm())
+    if (checkForDisabledStm())
     {
         return;
     }
@@ -80,7 +80,7 @@ void stm_plausibility_chk(IfxCpu_ResourceCpu cpu_idx)
     Ifx_STM* stmA;
     Ifx_STM* stmB;
 
-    switch(cpu_idx)
+    switch(cpuIdx)
     {
         case IfxCpu_ResourceCpu_0:
             stmA = &MODULE_STM0;
@@ -108,12 +108,12 @@ void stm_plausibility_chk(IfxCpu_ResourceCpu cpu_idx)
     while (repeatNtimes)
     {
         /* cross-check counters of STM A and STM B, raise alarm if deviation is great than 2 ms */
-        uint64 STM_A_Count = IfxStm_get(stmA);
-        uint64 STM_B_Count = IfxStm_get(stmB);
+        uint64 stmACount = IfxStm_get(stmA);
+        uint64 stmBCount = IfxStm_get(stmB);
 
-        uint64 stm_diff = STM_A_Count > STM_B_Count ? (STM_A_Count - STM_B_Count) : (STM_B_Count - STM_A_Count);
+        uint64 stmDiff = stmACount > stmBCount ? (stmACount - stmBCount) : (stmBCount - stmACount);
 
-        if (stm_diff > 2 * IFX_CFG_STM_TICKS_PER_MS)
+        if (stmDiff > 2 * IFX_CFG_STM_TICKS_PER_MS)
         {
             repeatNtimes--;
 
@@ -121,7 +121,7 @@ void stm_plausibility_chk(IfxCpu_ResourceCpu cpu_idx)
             if (repeatNtimes == 0U)
             {
 #if APP_RESET_ON_STM_PLCHK_FAIL
-                ebcm_trigger_sw_reset(EBCMResetType_application);
+                EbcmSsw_triggerSwReset(EBCMResetType_application);
 #else
                 ;
 #endif

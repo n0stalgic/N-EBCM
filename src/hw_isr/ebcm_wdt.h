@@ -54,7 +54,7 @@
 /*------------------------------------------------Function Prototypes------------------------------------------------*/
 /*********************************************************************************************************************/
 
-void ebcm_init_wdt(uint16 wdt_reload);
-void ebcm_svc_wdt(void);
+void EbcmHw_initWdt(uint16 wdtReload);
+void EbcmHw_svcWdt(void);
 
 #endif /* HW_ISR_EBCM_WDT_H_ */

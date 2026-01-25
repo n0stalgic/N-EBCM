@@ -55,16 +55,16 @@
 /*---------------------------------------------Function Implementations----------------------------------------------*/
 /*********************************************************************************************************************/
 
-void ebcm_ssw_alive_alarm_test(void)
+void EbcmSsw_aliveAlarmTest(void)
 {
-    ebcm_status.smu_status.smuCoreAliveTestSts        = NA;
-    ebcm_status.smu_status.smuCoreAliveTestClearSts   = NA;
-    ebcm_status.ssw_status.alive_alarm_status = TEST_NOT_EVAL;
+    ebcmStatus.smuStatus.smuCoreAliveTestSts        = NA;
+    ebcmStatus.smuStatus.smuCoreAliveTestClearSts   = NA;
+    ebcmStatus.sswStatus.aliveAlarmStatus = TEST_NOT_EVAL;
 
     /* Only cold power on reset will reset the SMU.
      * For this part of test SMU needs to be in a standby mode.
      */
-    if(ebcm_status.reset_code.resetType == IfxScuRcu_ResetType_coldpoweron)
+    if (ebcmStatus.resetCode.resetType == IfxScuRcu_ResetType_coldpoweron)
     {
         /* Start SMU Alive Test */
         IfxSmu_startAliveTest();
@@ -85,7 +85,7 @@ void ebcm_ssw_alive_alarm_test(void)
         }
 
         /* Set smuCoreAliveTestSts SMU status variable */
-        ebcm_status.smu_status.smuCoreAliveTestSts = PASS;
+        ebcmStatus.smuStatus.smuCoreAliveTestSts = PASS;
 
         /* Stop alive test */
         IfxSmu_stopAliveTest();
@@ -103,17 +103,17 @@ void ebcm_ssw_alive_alarm_test(void)
         /* Check if alarm is cleared */
         if(IfxSmuStdby_getSmuStdbyAlarmStatus(21, 16) == IfxSmuStdby_AlarmStatusFlag_noFaultExist)
         {
-            ebcm_status.ssw_status.alive_alarm_status = PASS;
+            ebcmStatus.sswStatus.aliveAlarmStatus = PASS;
 
             /* Set smuCoreAliveTestClearSts SMU status variable */
-            ebcm_status.smu_status.smuCoreAliveTestClearSts = PASS;
+            ebcmStatus.smuStatus.smuCoreAliveTestClearSts = PASS;
         }
         else
         {
-            ebcm_status.ssw_status.alive_alarm_status = FAILED;
+            ebcmStatus.sswStatus.aliveAlarmStatus = FAILED;
 
             /* Set smuCoreAliveTestClearSts SMU status variable */
-            ebcm_status.smu_status.smuCoreAliveTestClearSts = FAIL;
+            ebcmStatus.smuStatus.smuCoreAliveTestClearSts = FAIL;
         }
     }
     else

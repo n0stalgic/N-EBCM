@@ -49,8 +49,7 @@
 /*********************************************************************************************************************/
 /*-------------------------------------------------Global variables--------------------------------------------------*/
 /*********************************************************************************************************************/
-LBIST_status_t LBIST_status;
-ebcm_status_t ebcm_status;
+LbistStatus lbistStatus;
 
 /*********************************************************************************************************************/
 /*--------------------------------------------Private Variables/Constants--------------------------------------------*/
@@ -61,23 +60,23 @@ ebcm_status_t ebcm_status;
 /*********************************************************************************************************************/
 
 
-boolean ebcm_scu_LBIST_is_term_properly(void);
-boolean ebcm_scu_LBIST_is_term_PORST(void);
+boolean EbcmSsw_scuLbistIsTermProperly(void);
+boolean EbcmSsw_scuLbistIsTermPorst(void);
 
 /**
  * @brief execute an LBIST and handle the result during SSW sequence
  */
-void ssw_exec_LBIST(void);
+void EbcmSsw_execLbist(void);
 
 /**
  * @brief Evaluate LBIST result
  */
-void ssw_eval_LBIST(void);
+void EbcmSsw_evalLbist(void);
 
 /**
  * @brief Check LBIST status
  */
-void ssw_check_LBIST(void);
+void EbcmSsw_checkLbist(void);
 
 /*********************************************************************************************************************/
 /*---------------------------------------------Function Implementations----------------------------------------------*/
@@ -87,7 +86,7 @@ void ssw_check_LBIST(void);
  * The RSTSTAT.B.LBTERM status bit indicates if LBIST execution was properly terminated
  *
  */
-boolean ebcm_scu_LBIST_is_term_properly(void)
+boolean EbcmSsw_scuLbistIsTermProperly(void)
 {
     return (boolean)MODULE_SCU.RSTSTAT.B.LBTERM;
 }
@@ -95,7 +94,7 @@ boolean ebcm_scu_LBIST_is_term_properly(void)
 /**
  * The RSTSTAT.LBPORST status bit indicates if LBIST execution was terminated earlier due to a PORST assertion
  */
-boolean ebcm_scu_LBIST_is_term_PORST(void)
+boolean EbcmSsw_scuLbistIsTermPorst(void)
 {
     return (boolean)MODULE_SCU.RSTSTAT.B.LBPORST;
 }
@@ -103,16 +102,16 @@ boolean ebcm_scu_LBIST_is_term_PORST(void)
  * @brief execute an LBIST and handle the result during SSW sequence
  */
 
-void ssw_exec_LBIST(void)
+void EbcmSsw_execLbist(void)
 {
 
     /* Increment the counter that talies the LBIST requests via application SW.
      * Located in SCR XRAM memory to avoid modification by the LBIST.
      */
-    ssw_run_count->lbist_app_req_count++;
+    sswRunCount->lbistAppReqCount++;
 
     /* Clear cold reset status */
-    ssw_run_count->RSTSTAT.U = MODULE_SCU.RSTSTAT.U;
+    sswRunCount->RSTSTAT.U = MODULE_SCU.RSTSTAT.U;
 
     /* Reset the LBIST controller */
     IfxScuWdt_clearGlobalSafetyEndinitInline(IfxScuWdt_getGlobalSafetyEndinitPasswordInline());
@@ -136,58 +135,58 @@ void ssw_exec_LBIST(void)
 /*
  * Check the LBIST status
  * */
-void ssw_check_LBIST(void)
+void EbcmSsw_checkLbist(void)
 {
     /* check if LBIST was terminated by a PORST i.e. if not terminated then move forward with checks*/
-    if (FALSE == ebcm_scu_LBIST_is_term_PORST())
+    if (FALSE == EbcmSsw_scuLbistIsTermPorst())
     {
-        LBIST_status.LBIST_not_term_by_porst = PASSED;
+        lbistStatus.lbistNotTermByPorst = PASSED;
 
         /* check if LBIST was terminated Properly */
-        if (TRUE == ebcm_scu_LBIST_is_term_properly())
+        if (TRUE == EbcmSsw_scuLbistIsTermProperly())
         {
-            LBIST_status.LBIST_term_ok = PASSED;
+            lbistStatus.lbistTermOk = PASSED;
 
             /* Check if LBIST was already executed */
             if (TRUE == IfxScuLbist_isDone())
             {
-                LBIST_status.LBIST_test_done = PASSED;
+                lbistStatus.lbistTestDone = PASSED;
             }
             else
             {
-                LBIST_status.LBIST_test_done = FAILED;
+                lbistStatus.lbistTestDone = FAILED;
             }
         }
 
         /* If LBIST was not terminated properly then check if cold power reset and trigger LBIST */
         else
         {
-            LBIST_status.LBIST_term_ok = FAILED;
+            lbistStatus.lbistTermOk = FAILED;
         }
     }
 
     /* If LBIST was early terminated because of PORST then check if cold-POR and trigger LBIST */
     else
     {
-        LBIST_status.LBIST_not_term_by_porst = FAILED;
+        lbistStatus.lbistNotTermByPorst = FAILED;
     }
 }
 
 /**
  * @brief Evaluate LBIST result
  */
-void ssw_eval_LBIST(void)
+void EbcmSsw_evalLbist(void)
 {
 
-    boolean LBIST_passed;
+    boolean lbistPassed;
 
     /* if LBIST correctly executed, then we can evaluate results */
-    if (LBIST_status.LBIST_not_term_by_porst == PASSED &&
-            LBIST_status.LBIST_term_ok == PASSED &&
-                LBIST_status.LBIST_test_done == PASSED)
+    if (lbistStatus.lbistNotTermByPorst == PASSED &&
+        lbistStatus.lbistTermOk == PASSED &&
+        lbistStatus.lbistTestDone == PASSED)
     {
 
-        LBIST_passed = IfxScuLbist_evaluateResult(IfxScuLbist_defaultConfig.signature);
+        lbistPassed = IfxScuLbist_evaluateResult(IfxScuLbist_defaultConfig.signature);
 
         /* unlock LBIST module registers as these are safety critical registers */
         IfxScuWdt_clearGlobalSafetyEndinitInline(IfxScuWdt_getGlobalSafetyEndinitPasswordInline());
@@ -203,21 +202,21 @@ void ssw_eval_LBIST(void)
             timeout--;
         }
 
-        if (LBIST_passed == TRUE)
+        if (lbistPassed == TRUE)
         {
-            ebcm_status.ssw_status.lbist_status = PASSED;
-            LBIST_status.dev_not_defect = PASSED;
+            ebcmStatus.sswStatus.lbistStatus = PASSED;
+            lbistStatus.devNotDefect = PASSED;
         }
         else
         {
-            if (ssw_run_count->lbist_runs < LBIST_MAX_TRIES)
+            if (sswRunCount->lbistRuns < LBIST_MAX_TRIES)
             {
                 /* Trigger an LBIST */
-                ssw_exec_LBIST();
+                EbcmSsw_execLbist();
             }
             else
             {
-                LBIST_status.dev_not_defect = FAILED;
+                lbistStatus.devNotDefect = FAILED;
 
                 // TODO: indicate brake module failure, system needs to be serviced
             }
@@ -225,16 +224,16 @@ void ssw_eval_LBIST(void)
     }
     else
     {
-        ebcm_status.ssw_status.lbist_status = FAILED;
+        ebcmStatus.sswStatus.lbistStatus = FAILED;
 
-        if (ssw_run_count->lbist_runs < LBIST_MAX_TRIES)
+        if (sswRunCount->lbistRuns < LBIST_MAX_TRIES)
         {
-            ssw_exec_LBIST();
+            EbcmSsw_execLbist();
         }
         else
         {
             /* Trigger LBIST */
-            LBIST_status.dev_not_defect = FAILED;
+            lbistStatus.devNotDefect = FAILED;
 
             // TODO: indicate brake module failure, system needs to be serviced
         }
@@ -245,21 +244,21 @@ void ssw_eval_LBIST(void)
 /**
  * @brief Execute LBIST and evaluate the results
  */
-void ebcm_ssw_lbist(void)
+void EbcmSsw_lbist(void)
 {
-    LBIST_status.LBIST_not_term_by_porst = TEST_NOT_EVAL;
-    LBIST_status.LBIST_term_ok = TEST_NOT_EVAL;
-    LBIST_status.LBIST_test_done = TEST_NOT_EVAL;
-    LBIST_status.dev_not_defect = TEST_NOT_EVAL;
-    ebcm_status.ssw_status.lbist_status = TEST_NOT_EVAL;
+    lbistStatus.lbistNotTermByPorst = TEST_NOT_EVAL;
+    lbistStatus.lbistTermOk = TEST_NOT_EVAL;
+    lbistStatus.lbistTestDone = TEST_NOT_EVAL;
+    lbistStatus.devNotDefect = TEST_NOT_EVAL;
+    ebcmStatus.sswStatus.lbistStatus = TEST_NOT_EVAL;
 
     if (Ifx_Ssw_isColdPoweronReset() ||
-          ebcm_scu_LBIST_is_term_properly()  )
+          EbcmSsw_scuLbistIsTermProperly()  )
     {
         /* check LBIST status */
-        ssw_check_LBIST();
+        EbcmSsw_checkLbist();
 
         /* Evaluate results */
-        ssw_eval_LBIST();
+        EbcmSsw_evalLbist();
     }
 }

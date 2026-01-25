@@ -171,7 +171,7 @@ const FwCheckStruct fwCheckSMUTC37A [] =
     { &SMU_AG11.U,  {0x0,       EBCM_FWCHECK_DEFAULT_MASK}, {0x0,      EBCM_FWCHECK_DEFAULT_MASK}, {0x0,      EBCM_FWCHECK_DEFAULT_MASK}, {0x0,   EBCM_FWCHECK_DEFAULT_MASK} },
 };
 
-const int fwCheckSMUTC37A_size = sizeof(fwCheckSMUTC37A) / sizeof (FwCheckStruct);
+const int fwCheckSMUTC37ASize = sizeof(fwCheckSMUTC37A) / sizeof(FwCheckStruct);
 
 FwCheckVerificationStruct fwCheckVerificationSTMEM [] =
 {
@@ -192,7 +192,7 @@ const FwCheckStruct fwCheckSTMEMTC37A [] =
     { &SCU_STMEM6.U, {0xA030FB1F, EBCM_FWCHECK_DEFAULT_MASK}, {0xA020F82F, EBCM_FWCHECK_DEFAULT_MASK}, {0x2020B84F, EBCM_FWCHECK_DEFAULT_MASK}, {0x2020088F, EBCM_FWCHECK_DEFAULT_MASK} },
 };
 
-const int fwCheckSTMEMTC37A_size = sizeof(fwCheckSTMEMTC37A) / sizeof (FwCheckStruct);
+const int fwCheckSTMEMTC37ASize = sizeof(fwCheckSTMEMTC37A) / sizeof(FwCheckStruct);
 
 FwCheckVerificationStruct fwCheckVerificationLCLCON [] =
 {
@@ -208,7 +208,7 @@ const FwCheckStruct fwCheckLCLCONTC37A [] =
     { &SCU_LCLCON1.U, {0x80010000, EBCM_FWCHECK_DEFAULT_MASK}, {0x80010000, EBCM_FWCHECK_DEFAULT_MASK}, {0x80010000, EBCM_FWCHECK_DEFAULT_MASK}, {0x80010000, EBCM_FWCHECK_DEFAULT_MASK} },
 };
 
-const int fwCheckLCLCONTC37A_size = sizeof(fwCheckLCLCONTC37A) / sizeof (FwCheckStruct);
+const int fwCheckLCLCONTC37ASize = sizeof(fwCheckLCLCONTC37A) / sizeof(FwCheckStruct);
 
 /*----------------------------------------------------------------------------*/
 /*                                COLD RESET                                  */
@@ -225,7 +225,7 @@ const int fwCheckLCLCONTC37A_size = sizeof(fwCheckLCLCONTC37A) / sizeof (FwCheck
 #define SSH_LMU_STB_EXCEPTION       {0x5,    0x1,            0x0}
 #define SSH_XRAM_STB_EXCEPTION      {0x0,    0x0,            0x0}
 
-const memory_tested_t coldPorstSSHTC37A [] =
+const MemoryTested coldPorstSSHTC37A[] =
 {
     /* SSH                               mem_type,       INSEL_mask,             SSH registers default,      SSH registers after standby */
     /* CPU0 */
@@ -275,13 +275,13 @@ const memory_tested_t coldPorstSSHTC37A [] =
 };
 
 
-const int coldPorstSSHTC37A_size = sizeof(coldPorstSSHTC37A) / sizeof (memory_tested_t);
+const int coldPorstSSHTC37ASize = sizeof(coldPorstSSHTC37A) / sizeof(MemoryTested);
 
 /*----------------------------------------------------------------------------*/
 /*                                WARM RESET                                  */
 /*----------------------------------------------------------------------------*/
 
-const memory_tested_t warmPorstSSHTC37A [] =
+const MemoryTested warmPorstSSHTC37A[] =
 {
     /* SSH                              mem_type,       INSEL_mask,             SSH registers default,      SSH registers after standby */
     /* CPU0 */
@@ -329,13 +329,13 @@ const memory_tested_t warmPorstSSHTC37A [] =
     { IfxMtu_MbistSel_ethermacTx,       NON_INIT_MEM_TYPE,  NOT_APPLICABLE,     SSH_DEFAULT_NOT_INIT_RAM,   SSH_DEFAULT_NOT_INIT_RAM }
 };
 
-const int warmPorstSSHTC37A_size = sizeof(warmPorstSSHTC37A) / sizeof (memory_tested_t);
+const int warmPorstSSHTC37ASize = sizeof(warmPorstSSHTC37A) / sizeof(MemoryTested);
 
 /*----------------------------------------------------------------------------*/
 /*                               SYSTEM RESET                                 */
 /*----------------------------------------------------------------------------*/
 
-const memory_tested_t systemSSHTC37A [] =
+const MemoryTested systemSSHTC37A[] =
 {
     /* SSH                              mem_type,           INSEL_mask,         SSH registers default,  SSH registers after standby */
     /* CPU0 */
@@ -384,13 +384,13 @@ const memory_tested_t systemSSHTC37A [] =
     { IfxMtu_MbistSel_ethermacTx,       NON_INIT_MEM_TYPE,  NOT_APPLICABLE,     SSH_SYSTEM_RESET,       SSH_SYSTEM_RESET }
 
 };
-const int systemSSHTC37A_size = sizeof(systemSSHTC37A) / sizeof (memory_tested_t);
+const int systemSSHTC37ASize = sizeof(systemSSHTC37A) / sizeof(MemoryTested);
 
 /*----------------------------------------------------------------------------*/
 /*                             APPLICATION RESET                              */
 /*----------------------------------------------------------------------------*/
 
-const memory_tested_t applicationSSHTC37A [] =
+const MemoryTested applicationSSHTC37A[] =
 {
     /* SSH,                               mem_type,     INSEL_mask,     SSH registers default, SSH registers after standby */
     { IfxMtu_MbistSel_cpu0Dspr,         NOT_APPLICABLE, NOT_APPLICABLE, SSH_APPLICATION_RESET, SSH_APPLICATION_RESET },
@@ -398,7 +398,7 @@ const memory_tested_t applicationSSHTC37A [] =
     { IfxMtu_MbistSel_cpu1Dspr1,        NOT_APPLICABLE, NOT_APPLICABLE, SSH_APPLICATION_RESET, SSH_APPLICATION_RESET },
 };
 
-const int applicationSSHTC37A_size = sizeof(applicationSSHTC37A) / sizeof (memory_tested_t);
+const int applicationSSHTC37ASize = sizeof(applicationSSHTC37A) / sizeof(MemoryTested);
 
 
 /*********************************************************************************************************************/

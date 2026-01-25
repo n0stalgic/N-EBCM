@@ -53,29 +53,29 @@
 
 typedef struct
 {
-    uint16   eccd_val;
-    uint16   flt_status_val;
-    uint16   err_info_val;
-} ssh_register_t;
+    uint16 eccdVal;
+    uint16 fltStatusVal;
+    uint16 errInfoVal;
+} SshRegister;
 
 typedef struct
 {
-    IfxMtu_MbistSel  ssh_under_test;
-    uint16           memory_type;
-    uint16           in_sel_mask;
-    ssh_register_t   ssh_registers_def;
-    ssh_register_t   ssh_registers_stb;
-} memory_tested_t;
+    IfxMtu_MbistSel sshUnderTest;
+    uint16 memoryType;
+    uint16 inSelMask;
+    SshRegister sshRegistersDef;
+    SshRegister sshRegistersStb;
+} MemoryTested;
 
 typedef struct
 {
-    boolean mcu_fw_check_smu;
-    boolean mcu_fw_check_scu_stem;
-    boolean mcu_fw_check_scu_lclcon;
-    boolean mcu_fw_check_ssh;
-} mcu_fw_check_status_t;
+    boolean mcuFwCheckSmu;
+    boolean mcuFwCheckScuStem;
+    boolean mcuFwCheckScuLclcon;
+    boolean mcuFwCheckSsh;
+} McuFwCheckStatus;
 
-IFX_EXTERN mcu_fw_check_status_t mcu_fw_check_status;
+IFX_EXTERN McuFwCheckStatus mcuFwCheckStatus;
 
  
 /*********************************************************************************************************************/
@@ -90,10 +90,9 @@ IFX_EXTERN mcu_fw_check_status_t mcu_fw_check_status;
  * @brief The Safety Mechanism MCU_FW_CHECK is required for detecting failures, including both random hardware and
  * systematic hardware/software, which may have affected the correct termination of the firmware.
  */
-void ebcm_ssw_mcu_fw_check(void);
+void EbcmSsw_mcuFwCheck(void);
 
-
-void ebcm_clear_all_smu_alarms(void);
+void EbcmSsw_clearAllSmuAlarms(void);
 
 
 #endif /* INC_SSW_MCU_FW_CHK_H_ */

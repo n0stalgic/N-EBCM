@@ -43,11 +43,11 @@
 /*********************************************************************************************************************/
 typedef struct
 {
-    volatile Ifx_UReg_32Bit* reg_under_test;
-    uint32  mask;
-} mcu_startup_type_t;
+    volatile Ifx_UReg_32Bit* regUnderTest;
+    uint32 mask;
+} McuStartupType;
 
-const mcu_startup_type_t mcu_startup_check [] =
+const McuStartupType mcuStartupCheck[] =
 {
     /* regUnderTest,                mask        */
     { &DMU_HP_PROCONP00.U,       0xFFFFFFFFU     },
@@ -104,7 +104,7 @@ const mcu_startup_type_t mcu_startup_check [] =
     { &SCU_STSTAT.U,             0x000000FFU     }, /*Exception for TC33x and TC32 -> PMSWSTAT.HWCFGEVR.U */
 };
 
-const int mcu_startup_check_size = sizeof(mcu_startup_check) / sizeof (mcu_startup_type_t);
+const int mcuStartupCheckSize = sizeof(mcuStartupCheck) / sizeof(McuStartupType);
 
 
 /*********************************************************************************************************************/
@@ -123,30 +123,30 @@ const int mcu_startup_check_size = sizeof(mcu_startup_check) / sizeof (mcu_start
 /*---------------------------------------------Function Implementations----------------------------------------------*/
 /*********************************************************************************************************************/
 
-void ebcm_ssw_mcu_startup(void)
+void EbcmSsw_mcuStartup(void)
 {
     /* global variable to check is the CRC calculation is matching as expected */
-    ebcm_status.ssw_status.mcu_startup_status = TEST_NOT_EVAL;
+    ebcmStatus.sswStatus.mcuStartupStatus = TEST_NOT_EVAL;
 
     /* Set crc_value to initial seed value */
     uint32 initialSeed00 = 0x00000000;
     uint32 crcValueXor00 = initialSeed00;
 
     /* And start to calculate the CRC value for all register values */
-    for (uint8 crcElement=0; crcElement < mcu_startup_check_size; crcElement++)
+    for (uint8 crcElement = 0; crcElement < mcuStartupCheckSize; crcElement++)
     {   /* CRC Calculation with TriCore built in CRC instruction */
-        uint32 currentRegValue = *(volatile uint32 *) mcu_startup_check[crcElement].reg_under_test;
-        crcValueXor00 = __crc32(crcValueXor00, (currentRegValue & mcu_startup_check[crcElement].mask));
+        uint32 currentRegValue = *(volatile uint32*)mcuStartupCheck[crcElement].regUnderTest;
+        crcValueXor00 = __crc32(crcValueXor00, (currentRegValue & mcuStartupCheck[crcElement].mask));
     }
 
     if(crcValueXor00 == MCU_STARTUP_EXPECTED_CRC_00)
     {
-        ebcm_status.ssw_status.mcu_startup_status = PASSED;
+        ebcmStatus.sswStatus.mcuStartupStatus = PASSED;
     }
 
     /* If value is not as expected appropriate reaction shall be taken */
     else
     {
-        ebcm_status.ssw_status.mcu_startup_status = FAILED;
+        ebcmStatus.sswStatus.mcuStartupStatus = FAILED;
     }
 }

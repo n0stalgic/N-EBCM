@@ -54,49 +54,49 @@ typedef enum
     LED_PATTERN_BLINK_0_2_SEC,
     LED_PATTERN_BLINK_0_5_SEC,
     LED_PATTERN_ABS_IN_DEV,
-} led_flash_e;
+} LedFlash;
 
 
 typedef struct
 {
-        led_flash_e type;
-        uint8* pattern_array;
-        const Ifx_SizeT length;
+    LedFlash type;
+    uint8* patternArray;
+    const Ifx_SizeT length;
 
-} led_pattern;
+} LedPattern;
 
 typedef struct
 {
-        ebcm_led_index EBCM_LED;
-        uint16 count;
-        led_pattern active_pattern;
+    EbcmLedIndex ebcmLed;
+    uint16 count;
+    LedPattern activePattern;
 
-} EBCM_led_context;
+} EbcmLedContext;
 
 #define LED_PATTERN_OFF_SEC_LEN   10U
-const led_pattern led_pattern_off     =
-                { .pattern_array = (const uint8[])
+const LedPattern ledPatternOff =
+                { .patternArray = (const uint8[])
                                    { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
-                  .length        = LED_PATTERN_OFF_SEC_LEN,
-                  .type          = LED_PATTERN_OFF
-                };
+                   .length        = LED_PATTERN_OFF_SEC_LEN,
+                   .type          = LED_PATTERN_OFF
+                 };
 
 
 #define LED_PATTERN_0_2_SEC_LEN   40U
-const led_pattern led_pattern_0_2_sec =
-                                {  .pattern_array =  (const uint8[])
-                                      { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+const LedPattern ledPattern0p2Sec =
+                                 {  .patternArray =  (const uint8[])
+                                       { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
                                       0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
                                       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
                                       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
 
-                                      .length = LED_PATTERN_0_2_SEC_LEN,
-                                      .type = LED_PATTERN_BLINK_0_2_SEC };
+                                       .length = LED_PATTERN_0_2_SEC_LEN,
+                                       .type = LED_PATTERN_BLINK_0_2_SEC };
 
 
 #define LED_PATTERN_0_5_SEC_LEN   100U
-const led_pattern led_pattern_0_5_sec = { .pattern_array = (const uint8[])
-                                    { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+const LedPattern ledPattern0p5Sec = { .patternArray = (const uint8[])
+                                     { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
                                     0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
                                     0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
                                     0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
@@ -112,7 +112,7 @@ const led_pattern led_pattern_0_5_sec = { .pattern_array = (const uint8[])
                                     .type   = LED_PATTERN_BLINK_0_5_SEC };
 
 #define LED_PATTERN_ABS_INDEV   290U
-const led_pattern led_pattern_abs_indev = { .pattern_array = (const uint8[])
+const LedPattern ledPatternAbsIndev = { .patternArray = (const uint8[])
         {   0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -144,13 +144,13 @@ const led_pattern led_pattern_abs_indev = { .pattern_array = (const uint8[])
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
         },
 
-        .length = LED_PATTERN_ABS_INDEV,
-        .type = LED_PATTERN_ABS_IN_DEV
+         .length = LED_PATTERN_ABS_INDEV,
+         .type = LED_PATTERN_ABS_IN_DEV
 };
 
 
-EBCM_led_context lc_1;
-EBCM_led_context lc_2;
+EbcmLedContext lc1;
+EbcmLedContext lc2;
 
 
 /*********************************************************************************************************************/
@@ -162,7 +162,7 @@ EBCM_led_context lc_2;
 /*********************************************************************************************************************/
 
 /* Initialize GPIO pins for LEDs */
-void init_leds(void)
+void EbcmHw_initLeds(void)
 {
     /* Initialize GPIO pins for LEDs */
     IfxPort_setPinMode(&MODULE_P00, EBCM_LED1, IfxPort_Mode_outputPushPullGeneral);
@@ -172,54 +172,54 @@ void init_leds(void)
     IfxPort_setPinState(&MODULE_P00, EBCM_LED1, IfxPort_State_high);
     IfxPort_setPinState(&MODULE_P00, EBCM_LED2, IfxPort_State_high);
 
-    lc_1.EBCM_LED = EBCM_LED1;
-    lc_1.count = 0;
-    lc_1.active_pattern = led_pattern_abs_indev;
+    lc1.ebcmLed = EBCM_LED1;
+    lc1.count = 0;
+    lc1.activePattern = ledPatternAbsIndev;
 
 
-    lc_2.EBCM_LED = EBCM_LED2;
-    lc_2.count = 0;
-    lc_2.active_pattern = led_pattern_off;
+    lc2.ebcmLed = EBCM_LED2;
+    lc2.count = 0;
+    lc2.activePattern = ledPatternOff;
 
 }
 
-void set_led_pattern(EBCM_led_context* led_context, led_pattern pattern)
+void EbcmHw_setLedPattern(EbcmLedContext* ledContext, LedPattern pattern)
 {
-    if (led_context != NULL)
+    if (ledContext != NULL)
     {
-        led_context->count = 0U;
-        led_context->active_pattern = pattern;
+        ledContext->count = 0U;
+        ledContext->activePattern = pattern;
     }
 }
 
-void update_led(EBCM_led_context* led_context)
+void EbcmHw_updateLed(EbcmLedContext* ledContext)
 {
-    if (led_context != NULL)
+    if (ledContext != NULL)
     {
-        uint8 val = led_context->active_pattern.pattern_array[led_context->count];
+        uint8 val = ledContext->activePattern.patternArray[ledContext->count];
 
         // active low leds
         if (val)
         {
-            IfxPort_setPinState(&MODULE_P00, led_context->EBCM_LED, IfxPort_State_low);
+            IfxPort_setPinState(&MODULE_P00, ledContext->ebcmLed, IfxPort_State_low);
         }
         else
         {
-            IfxPort_setPinState(&MODULE_P00, led_context->EBCM_LED, IfxPort_State_high);
+            IfxPort_setPinState(&MODULE_P00, ledContext->ebcmLed, IfxPort_State_high);
         }
 
-        if (++(led_context->count) >= led_context->active_pattern.length)
+        if (++(ledContext->count) >= ledContext->activePattern.length)
         {
-            led_context->count = 0;
+            ledContext->count = 0;
         }
 
     }
 
 }
 
-void ebcm_led_task(void)
+void EbcmHw_ledTask(void)
 {
-    update_led(&lc_1);
-    update_led(&lc_2);
+    EbcmHw_updateLed(&lc1);
+    EbcmHw_updateLed(&lc2);
 }
 

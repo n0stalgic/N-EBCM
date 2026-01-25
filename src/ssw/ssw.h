@@ -46,7 +46,7 @@
 /**
  * @brief address to store power-on check metadata in SCR XRAM
  */
-#define SSW_STATUS_DATA_ADDRESS (*(volatile ssw_run_count_t* ) PMS_XRAM)
+#define SSW_STATUS_DATA_ADDRESS (*(volatile SswRunCount*)PMS_XRAM)
 
 
 /*********************************************************************************************************************/
@@ -59,20 +59,20 @@
 
 typedef struct
 {
-    uint8               lbist_app_req_count;     /* Amount of LBIST requests (by application software) */
-    uint8               lbist_runs;              /* Amount of LBIST executions */
-    uint8               mcu_fw_check_count;      /* Amount of MCU_FW_CHECK executions*/
-    uint8               mcu_fw_check_fail_count; /* Amount of MCU_FW_CHECK failures */
-    Ifx_SCU_RSTSTAT     RSTSTAT;                 /* RSTSTAT register copy */
+    uint8           lbistAppReqCount;       /* Amount of LBIST requests (by application software) */
+    uint8           lbistRuns;              /* Amount of LBIST executions */
+    uint8           mcuFwCheckCount;        /* Amount of MCU_FW_CHECK executions*/
+    uint8           mcuFwCheckFailCount;    /* Amount of MCU_FW_CHECK failures */
+    Ifx_SCU_RSTSTAT RSTSTAT;                /* RSTSTAT register copy */
 
-} ssw_run_count_t;
+} SswRunCount;
 
 typedef enum
 {
     FAILED = 0,
     PASSED,
     TEST_NOT_EVAL
-} ssw_test_status;
+} SswTestStatus;
 
 #define LAST_IFXSCURCU_RESETTYPE_ENUM IfxScuRcu_ResetType_undefined
 
@@ -86,33 +86,33 @@ typedef enum IfxScuRcu_ResetType
     EBCMResetType_undefined   = IfxScuRcu_ResetType_undefined,        /* Undefined Reset */
     EBCMResetType_lbist       = LAST_IFXSCURCU_RESETTYPE_ENUM + 10    /* LBIST Reset, adding 10 to be sure
                                                                                enum value is not assigned. */
-} ebcm_reset_t;
+} EbcmReset;
 
 typedef struct
 {
 
-        ssw_test_status    lbist_status;
-        ssw_test_status    monbist_status;
-        ssw_test_status    mcu_fw_chk_status;
-        ssw_test_status    mcu_startup_status;
-        ssw_test_status    alive_alarm_status;
-        ssw_test_status    mbist_status;
-} ssw_status_t;
+    SswTestStatus lbistStatus;
+    SswTestStatus monbistStatus;
+    SswTestStatus mcuFwChkStatus;
+    SswTestStatus mcuStartupStatus;
+    SswTestStatus aliveAlarmStatus;
+    SswTestStatus mbistStatus;
+} SswStatus;
 
 typedef struct
 {
-    boolean test_ok_flag;
-    boolean smu_error_flag;
-    boolean pms_error_flag;
-} ssw_monbist_status_t;
+    boolean testOkFlag;
+    boolean smuErrorFlag;
+    boolean pmsErrorFlag;
+} SswMonbistStatus;
 
-IFX_EXTERN ssw_monbist_status_t monbist_status;
+IFX_EXTERN SswMonbistStatus monbistStatus;
 
 
-typedef IfxScuRcu_ResetType ebcm_reset_type_t;
-typedef IfxScuRcu_ResetCode ebcm_reset_code_t;
+typedef IfxScuRcu_ResetType EbcmResetType;
+typedef IfxScuRcu_ResetCode EbcmResetCode;
 
-IFX_EXTERN volatile ssw_run_count_t* ssw_run_count;
+IFX_EXTERN volatile SswRunCount* sswRunCount;
 
  
 /*********************************************************************************************************************/
@@ -122,15 +122,15 @@ IFX_EXTERN volatile ssw_run_count_t* ssw_run_count;
 /*********************************************************************************************************************/
 /*------------------------------------------------Function Prototypes------------------------------------------------*/
 /*********************************************************************************************************************/
-void run_app_sw_startup(void);
-void ebcm_trigger_warm_porst(void);
-void ebcm_trigger_sw_reset(ebcm_reset_type_t resetType);
-void ebcm_ssw_lbist(void);
-ebcm_reset_code_t ebcm_eval_reset(void);
+void EbcmSsw_runAppSwStartup(void);
+void EbcmSsw_triggerWarmPorst(void);
+void EbcmSsw_triggerSwReset(EbcmResetType resetType);
+void EbcmSsw_lbist(void);
+EbcmResetCode EbcmSsw_evalReset(void);
 
-const char* ebcm_get_lbist_result_str(ssw_test_status status);
+const char* EbcmSsw_getLbistResultStr(SswTestStatus status);
 
-boolean ebcm_lockstep_injection_test(void);
+boolean EbcmSsw_lockstepInjectionTest(void);
 
 
 #endif /* INC_SSW_H_ */

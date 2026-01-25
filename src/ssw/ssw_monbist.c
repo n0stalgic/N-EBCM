@@ -56,7 +56,7 @@
 
 #if (IFX_CFG_SSW_ENABLE_MONBIST == 1U || EBCM_CFG_SSW_ENABLE_MONBIST == 1U)
 
-void ebcm_ssw_monbist(void)
+void EbcmSsw_monbist(void)
 {
      uint32 timeout;
 
@@ -103,9 +103,9 @@ void ebcm_ssw_monbist(void)
     PMS_CMD_STDBY.U    = 0x40000000U;
     IFX_CFG_SSW_SET_SAFETY_ENDINIT();
 #if (IFX_CFG_SSW_ENABLE_MONBIST == 1U || EBCM_CFG_SSW_ENABLE_MONBIST == 1U)
-    Ifx_Ssw_jumpToFunction(&ebcm_ssw_monbist_check);
+    Ifx_Ssw_jumpToFunction(&EbcmSsw_monbistCheck);
 #else
-    ebcm_ssw_monbist_check();
+    EbcmSsw_monbistCheck();
 
     /* Disable the write-protection for registers */
     IFX_CFG_SSW_CLEAR_SAFETY_ENDINIT();
@@ -119,22 +119,22 @@ void ebcm_ssw_monbist(void)
     IFX_CFG_SSW_SET_SAFETY_ENDINIT();
 #endif /* IFX_CFG_SSW_ENABLE_MONBIST == 1U && SLK_CFG_SSW_ENABLE_MONBIST == 0U */
 
-    monbist_status.test_ok_flag = IfxSmuStdby_getSmuStdbyMonBistTestOkFlag();
-    monbist_status.smu_error_flag = !IfxSmuStdby_getSmuStdbyMonBistSmuErrorFlag();
-    monbist_status.pms_error_flag = !IfxSmuStdby_getSmuStdbyMonBistPmsErrorFlag();
-    if ((FALSE == monbist_status.test_ok_flag) ||
-       (FALSE == monbist_status.smu_error_flag) ||
-       (FALSE == monbist_status.pms_error_flag))
+    monbistStatus.testOkFlag = IfxSmuStdby_getSmuStdbyMonBistTestOkFlag();
+    monbistStatus.smuErrorFlag = !IfxSmuStdby_getSmuStdbyMonBistSmuErrorFlag();
+    monbistStatus.pmsErrorFlag = !IfxSmuStdby_getSmuStdbyMonBistPmsErrorFlag();
+    if ((FALSE == monbistStatus.testOkFlag) ||
+        (FALSE == monbistStatus.smuErrorFlag) ||
+        (FALSE == monbistStatus.pmsErrorFlag))
     {
-       ebcm_status.ssw_status.monbist_status = FAILED;
+       ebcmStatus.sswStatus.monbistStatus = FAILED;
     }
     else
     {
-        ebcm_status.ssw_status.monbist_status = PASSED;
+        ebcmStatus.sswStatus.monbistStatus = PASSED;
     }
 }
 
-void ebcm_ssw_monbist_check(void)
+void EbcmSsw_monbistCheck(void)
 {
     /* Check for MONBIST error state */
     if ((PMS_MONBISTSTAT.B.TSTOK == 0U) || (PMS_MONBISTSTAT.B.SMUERR == 1U) || (PMS_MONBISTSTAT.B.PMSERR == 1U))
