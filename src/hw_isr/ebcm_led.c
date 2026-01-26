@@ -32,6 +32,7 @@
 #include "ebcm_cfg.h"
 #include "ebcm_led.h"
 #include "IfxPort.h"
+#include "vfw_checkpoint.h"
 
 /*********************************************************************************************************************/
 /*------------------------------------------------------Macros-------------------------------------------------------*/
@@ -42,6 +43,7 @@
 /*********************************************************************************************************************/
 /*-------------------------------------------------Global variables--------------------------------------------------*/
 /*********************************************************************************************************************/
+
 
 /*********************************************************************************************************************/
 /*--------------------------------------------Private Variables/Constants--------------------------------------------*/
@@ -194,6 +196,7 @@ void EbcmHw_setLedPattern(EbcmLedContext* ledContext, LedPattern pattern)
 
 void EbcmHw_updateLed(EbcmLedContext* ledContext)
 {
+    VFW_CHECKPOINT_ENTRY(VFW_FUNC_SIGNATURE_LED_UPDATE);
     if (ledContext != NULL)
     {
         uint8 val = ledContext->activePattern.patternArray[ledContext->count];
@@ -214,12 +217,22 @@ void EbcmHw_updateLed(EbcmLedContext* ledContext)
         }
 
     }
+    VFW_CHECKPOINT_EXIT(VFW_FUNC_SIGNATURE_LED_UPDATE);
 
 }
 
 void EbcmHw_ledTask(void)
 {
+    VFW_CHECKPOINT_ENTRY(VFW_TASK_SIGNATURE_LED);
+
+    VFW_CHECKPOINT_PRECHECK(VFW_FUNC_SIGNATURE_LED_UPDATE);
     EbcmHw_updateLed(&lc1);
+    VFW_CHECKPOINT_POSTCHECK(VFW_FUNC_SIGNATURE_LED_UPDATE);
+
+    VFW_CHECKPOINT_PRECHECK(VFW_FUNC_SIGNATURE_LED_UPDATE);
     EbcmHw_updateLed(&lc2);
+    VFW_CHECKPOINT_POSTCHECK(VFW_FUNC_SIGNATURE_LED_UPDATE);
+
+    VFW_CHECKPOINT_EXIT(VFW_TASK_SIGNATURE_LED);
 }
 

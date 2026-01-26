@@ -1,6 +1,6 @@
 /******************************************************************************
- * @file    sm_stm.c
- * @brief   Add brief here
+ * @file    vfw_checkpoint.h
+ * @brief   Vital Framework checkpointing
  *
  * MIT License
  *
@@ -25,27 +25,53 @@
  * SOFTWARE.
  *****************************************************************************/
 
+#ifndef VFW_VFW_CHECKPOINT_H_
+#define VFW_VFW_CHECKPOINT_H_
 
 /*********************************************************************************************************************/
 /*-----------------------------------------------------Includes------------------------------------------------------*/
 /*********************************************************************************************************************/
-#include <safe_computation/smu.h>
-#include "IfxStm.h"
-#include "ebcm_cfg.h"
-#include "ssw.h"
-#include "sm_stm.h"
+#include "Ifx_Types.h"
 
 /*********************************************************************************************************************/
 /*------------------------------------------------------Macros-------------------------------------------------------*/
 /*********************************************************************************************************************/
-#define STM_APP_RESET       0
-#define REPEAT_COUNT        5
+#define VFW_CHECKPOINT_PRECHECK(signature)  (vfwCheckpoint_A += (signature))
+#define VFW_CHECKPOINT_ENTRY(signature)     (vfwCheckpoint_A -= (signature))
+#define VFW_CHECKPOINT_EXIT(signature)      (vfwCheckpoint_B += (signature))
+#define VFW_CHECKPOINT_POSTCHECK(signature) (vfwCheckpoint_B -= (signature))
 
-#define APP_RESET_ON_STM_PLCHK_FAIL 1
+/* Task signatures for functions running in the scheduler */
+#define VFW_NULL_SIGNATURE             0x00000000U
+#define VFW_TASK_SIGNATURE_LED         0xD40B934CU
+#define VFW_TASK_SIGNATURE_WDT         0x1C653C80U
+#define VFW_TASK_SIGNATURE_2           0x747D2AEFU
+#define VFW_TASK_SIGNATURE_3           0x1E1D6CB4U
+#define VFW_TASK_SIGNATURE_4           0xE0175EE9U
+#define VFW_TASK_SIGNATURE_5           0x07A1557BU
+#define VFW_TASK_SIGNATURE_6           0xB0EF99CDU
+#define VFW_TASK_SIGNATURE_7           0x2D63F2ACU
+#define VFW_TASK_SIGNATURE_8           0x8D3AFF51U
+#define VFW_TASK_SIGNATURE_9           0xD4B0D912U
+
+/* Function signatures for individual functions needed for checkpointing.
+ * These funcs may or may not be called by tasks running in the scheduler
+ */
+#define VFW_FUNC_SIGNATURE_LED_UPDATE  0x737AB5EFU
+
+
 
 /*********************************************************************************************************************/
 /*-------------------------------------------------Global variables--------------------------------------------------*/
 /*********************************************************************************************************************/
+IFX_EXTERN volatile uint32 vfwCheckpoint_A;
+IFX_EXTERN volatile uint32 vfwCheckpoint_B;
+
+/*********************************************************************************************************************/
+/*-------------------------------------------------Data Structures---------------------------------------------------*/
+/*********************************************************************************************************************/
+
+typedef uint32 VfwSignature;
 
 /*********************************************************************************************************************/
 /*--------------------------------------------Private Variables/Constants--------------------------------------------*/
@@ -54,83 +80,11 @@
 /*********************************************************************************************************************/
 /*------------------------------------------------Function Prototypes------------------------------------------------*/
 /*********************************************************************************************************************/
-boolean checkForDisabledStm(void);
+void VFW_Init(void);
+void VFW_Precheck(VfwSignature sig);
+void VFW_Postcheck(VfwSignature sig);
+boolean VFW_IntegrityCheck(void);
+boolean VFW_HasIntegrityCheckFailed(void);
 
-/*********************************************************************************************************************/
-/*---------------------------------------------Function Implementations----------------------------------------------*/
-/*********************************************************************************************************************/
 
-boolean checkForDisabledStm(void)
-{
-    boolean isAnStmDisabled = (MODULE_STM0.CLC.B.DISS == 1 ||
-                              MODULE_STM1.CLC.B.DISS == 1 ||
-                              MODULE_STM2.CLC.B.DISS == 1);
-
-    return isAnStmDisabled;
-}
-
-void stmPlausibilityCheck(IfxCpu_ResourceCpu cpuIdx)
-{
-    /* Only do STM monitoring if all STM modules are enabled */
-    if (checkForDisabledStm())
-    {
-        return;
-    }
-
-    Ifx_STM* stmA;
-    Ifx_STM* stmB;
-
-    switch(cpuIdx)
-    {
-        case IfxCpu_ResourceCpu_0:
-            stmA = &MODULE_STM0;
-            stmB = &MODULE_STM1;
-            break;
-        case IfxCpu_ResourceCpu_1:
-            stmA = &MODULE_STM1;
-            stmB = &MODULE_STM2;
-            break;
-        case IfxCpu_ResourceCpu_2:
-            stmA = &MODULE_STM2;
-            stmB = &MODULE_STM0;
-            break;
-        default:
-            while (1)
-            {
-                /* hang currently for debug */
-                __disable();
-            }
-            break;
-    }
-
-    uint8 repeatNtimes = REPEAT_COUNT;
-
-    while (repeatNtimes)
-    {
-        /* cross-check counters of STM A and STM B, raise alarm if deviation is great than 2 ms */
-        uint64 stmACount = IfxStm_get(stmA);
-        uint64 stmBCount = IfxStm_get(stmB);
-
-        uint64 stmDiff = stmACount > stmBCount ? (stmACount - stmBCount) : (stmBCount - stmACount);
-
-        if (stmDiff > 2 * IFX_CFG_STM_TICKS_PER_MS)
-        {
-            repeatNtimes--;
-
-            /* Safety manual recommends an application reset, but we'll latch an SMU alarm eventually */
-            if (repeatNtimes == 0U)
-            {
-#if APP_RESET_ON_STM_PLCHK_FAIL
-                EbcmSsw_triggerSwReset(EBCMResetType_application);
-#else
-                ;
-#endif
-            }
-        }
-        else
-        {
-            break;
-        }
-
-    }
-}
+#endif /* VFW_VFW_CHECKPOINT_H_ */

@@ -1,10 +1,10 @@
 /******************************************************************************
- * @file    {file_name}
+ * @file    trap_handle.h
  * @brief   Add brief here
  *
  * MIT License
  *
- * Copyright (c) 2025 n0stalgic
+ * Copyright (c) 2026 n0stalgic
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -25,50 +25,60 @@
  * SOFTWARE.
  *****************************************************************************/
 
-#ifndef CONFIG_EBCM_CFG_H_
-#define CONFIG_EBCM_CFG_H_
+#ifndef SAFE_COMPUTATION_TRAP_HANDLE_H_
+#define SAFE_COMPUTATION_TRAP_HANDLE_H_
 
 /*********************************************************************************************************************/
 /*-----------------------------------------------------Includes------------------------------------------------------*/
 /*********************************************************************************************************************/
+#include "Cpu/Std/Ifx_Types.h"
+#include "Cpu/Std/IfxCpu_Intrinsics.h"
+#include "Ifx_Cfg.h"
+#include "IfxCpu_Trap.h"
+#include "IfxSmu_reg.h"
+#include "IfxCpu_cfg.h"
 
 /*********************************************************************************************************************/
 /*------------------------------------------------------Macros-------------------------------------------------------*/
 /*********************************************************************************************************************/
-#define EBCM_CFG_SSW_ENABLE_LBIST_BOOT            1
-#define EBCM_CFG_SSW_ENABLE_LBIST_APPSW           1
-#define EBCM_CFG_SSW_ENABLE_MONBIST               1
-#define EBCM_CFG_SSW_ENABLE_MCU_FW_CHECK          1
-#define EBCM_CFG_SSW_ENABLE_MCU_STARTUP           1
-#define EBCM_CFG_SSW_ENABLE_ALIVE_ALARM_TEST      1
-#define EBCM_CFG_SSW_ENABLE_REG_MONITOR_TEST      1
-#define EBCM_CFG_SSW_ENABLE_MBIST                 1
-
-/* Number of STM ticks per millisecond */
-#define IFX_CFG_STM_TICKS_PER_MS                  100000
-#define IFX_CFG_STM_TICKS_PER_US                  100
-
-#define LED1_EBCM_ALIVE                           &MODULE_P00,5
-#define LED2_ALRM_DETECTED                        &MODULE_P00,6
-
-/* [°C] difference in the redundant die temperature as specified in the safety manual */
-#define MAX_DIE_TEMP_DIFF                        9.0
-
-#define CPU0_VECT_TABLE_ID                       0
-#define CPU1_VECT_TABLE_ID                       1
-#define CPU2_VECT_TABLE_ID                       2
-
-#define CPU_WHICH_RUN_SMU                        CPU0_VECT_TABLE_ID
-
-#define ISR_PRORITY_SMU_ISR_0                    5
-#define ISR_PRORITY_SMU_ISR_1                    6
-#define ISR_PRORITY_SMU_ISR_2                    7
-#define ISR_PRIORITY_GPT12_TIMER                 8
-#define ISR_PRIORITY_OS_TICK                     9       /* Define the tick for the Application */
-#define ISR_PRIORITY_FCE_ER                      13      /* Flexible CRC Engine */
-#define ISR_PRIORITY_DTS                         14      /* Die Temperature Sensor */
 
 
+#define SV_FAILURE_DBG() \
+                        do { \
+                            __disable(); \
+                            while (1) __debug(); \
+                        } \
+                        while (1)
+
+#define SV_BAD_SCHEDULER_FUNC_DBG SV_FAILURE_DBG
+#define SV_VFW_INTEGRITY_CHECK_FAILURE SV_FAILURE_DBG
+
+
+/*define a hook for internal protection error traps*/
+#define IFX_CFG_CPU_TRAP_IPE_HOOK(trapWatch)    ((void)internalProtectionHook(trapWatch))
+
+/*define a hook for instruction error traps*/
+#define IFX_CFG_CPU_TRAP_IE_HOOK(trapWatch)     ((void)instructionErrorsHook(trapWatch))
+
+/*define a hook for bus error traps*/
+#define IFX_CFG_CPU_TRAP_BE_HOOK(trapWatch)     ((void)busHook(trapWatch))
+
+/*define a hook for non-maskable interrupt traps*/
+#define IFX_CFG_CPU_TRAP_NMI_HOOK(trapWatch)    ((void)nonMaskableInterruptHook(trapWatch))
+
+/*define how many context save areas can be dumped*/
+#define CSA_CAPTURE_LIMIT   (20u)
+
+/*define how many stacks can be dumped for upper context dumps*/
+#define STACK_CAPTURE_LIMIT (10u)
+
+/*define how many words should be captured from each stack*/
+#define STACK_CAPTURE_SIZE  (8u)
+
+#define CSA_UPPER_CONTEXT   (1)
+#define CSA_LOWER_CONTEXT   (0)
+
+#define IFX_CFG_CPU_TRAP_ASSERT_HOOK(trapWatch)     ((void)assertHook(trapWatch))
 
 /*********************************************************************************************************************/
 /*-------------------------------------------------Global variables--------------------------------------------------*/
@@ -78,6 +88,49 @@
 /*-------------------------------------------------Data Structures---------------------------------------------------*/
 /*********************************************************************************************************************/
 
+typedef struct {
+     Ifx_CPU_PCXI CSA_PCXI;
+     Ifx_CPU_PSW CSA_PSW;
+     Ifx_CPU_A CSA_A10;
+     Ifx_CPU_A CSA_A11;
+     Ifx_CPU_D CSA_D8;
+     Ifx_CPU_D CSA_D9;
+     Ifx_CPU_D CSA_D10;
+     Ifx_CPU_D CSA_D11;
+     Ifx_CPU_A CSA_A12;
+     Ifx_CPU_A CSA_A13;
+     Ifx_CPU_A CSA_A14;
+     Ifx_CPU_A CSA_A15;
+     Ifx_CPU_D CSA_D12;
+     Ifx_CPU_D CSA_D13;
+     Ifx_CPU_D CSA_D14;
+     Ifx_CPU_D CSA_D15;
+}Ifx_CSA_Upper;
+
+typedef struct {
+     Ifx_CPU_PCXI CSA_PCXI;
+     Ifx_CPU_A CSA_A11;
+     Ifx_CPU_A CSA_A2;
+     Ifx_CPU_A CSA_A3;
+     Ifx_CPU_D CSA_D0;
+     Ifx_CPU_D CSA_D1;
+     Ifx_CPU_D CSA_D2;
+     Ifx_CPU_D CSA_D3;
+     Ifx_CPU_A CSA_A4;
+     Ifx_CPU_A CSA_A5;
+     Ifx_CPU_A CSA_A6;
+     Ifx_CPU_A CSA_A7;
+     Ifx_CPU_D CSA_D4;
+     Ifx_CPU_D CSA_D5;
+     Ifx_CPU_D CSA_D6;
+     Ifx_CPU_D CSA_D7;
+}Ifx_CSA_Lower;
+
+typedef union {
+    Ifx_CSA_Upper UPPER;
+    Ifx_CSA_Lower LOWER;
+} Ifx_CSA;
+
 /*********************************************************************************************************************/
 /*--------------------------------------------Private Variables/Constants--------------------------------------------*/
 /*********************************************************************************************************************/
@@ -86,5 +139,17 @@
 /*------------------------------------------------Function Prototypes------------------------------------------------*/
 /*********************************************************************************************************************/
 
+void csaCapture(void);
+void piearPietrCapture(void);
+void diearDietrCapture(void);
+void datrDeaddCapture(void);
+void agCapture(void);
 
-#endif /* CONFIG_EBCM_CFG_H_ */
+void internalProtectionHook(IfxCpu_Trap trapInfo);
+void instructionErrorsHook(IfxCpu_Trap trapInfo);
+void busHook(IfxCpu_Trap trapInfo);
+void assertHook(IfxCpu_Trap trapInfo);
+void nonMaskableInterruptHook(IfxCpu_Trap trapInfo);
+
+
+#endif /* SAFE_COMPUTATION_TRAP_HANDLE_H_ */

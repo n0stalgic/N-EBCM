@@ -31,6 +31,7 @@
 /*********************************************************************************************************************/
 #include <ebcm_wdt.h>
 #include "IfxScuWdt.h"
+#include "vfw_checkpoint.h"
 
 /*********************************************************************************************************************/
 /*------------------------------------------------------Macros-------------------------------------------------------*/
@@ -58,10 +59,16 @@ void EbcmHw_initWdt(uint16 wdtReload)
 
     IfxScuWdt_changeCpuWatchdogReload(IfxScuWdt_getCpuWatchdogPassword(), wdtReload);
     IfxScuWdt_serviceCpuWatchdog(IfxScuWdt_getCpuWatchdogPassword());
+
 }
 
 void EbcmHw_svcWdt(void)
 {
+    VFW_CHECKPOINT_ENTRY(VFW_TASK_SIGNATURE_WDT);
+
     IfxScuWdt_serviceCpuWatchdog(IfxScuWdt_getCpuWatchdogPassword());
+
+    VFW_CHECKPOINT_EXIT(VFW_TASK_SIGNATURE_WDT);
+
 }
 

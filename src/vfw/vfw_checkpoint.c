@@ -1,5 +1,5 @@
 /******************************************************************************
- * @file    ebcm_hw_init.c
+ * @file    vfw_checkpoint.c
  * @brief   Add brief here
  *
  * MIT License
@@ -29,11 +29,8 @@
 /*********************************************************************************************************************/
 /*-----------------------------------------------------Includes------------------------------------------------------*/
 /*********************************************************************************************************************/
-#include "ebcm_main.h"
-#include "Ifx_Types.h"
+#include "vfw_checkpoint.h"
 #include "IfxCpu.h"
-#include "ebcm_sched.h"
-#include "ebcm_wdt.h"
 
 /*********************************************************************************************************************/
 /*------------------------------------------------------Macros-------------------------------------------------------*/
@@ -43,11 +40,15 @@
 /*-------------------------------------------------Global variables--------------------------------------------------*/
 /*********************************************************************************************************************/
 
-EbcmStatus ebcmStatus;
+/* probably put these VFW counters and flags in safe RAM... TBD */
+volatile uint32 vfwCheckpoint_A = 0U;
+volatile uint32 vfwCheckpoint_B = 0U;
 
 /*********************************************************************************************************************/
 /*--------------------------------------------Private Variables/Constants--------------------------------------------*/
 /*********************************************************************************************************************/
+
+volatile boolean VFW_integrityCheckFailed = FALSE;
 
 /*********************************************************************************************************************/
 /*------------------------------------------------Function Prototypes------------------------------------------------*/
@@ -57,54 +58,45 @@ EbcmStatus ebcmStatus;
 /*---------------------------------------------Function Implementations----------------------------------------------*/
 /*********************************************************************************************************************/
 
-void EbcmHw_initEbcm(EbcmSysInfo* ebcmInfo, IfxCpu_ResourceCpu cpuIdx)
+void VFW_Init(void)
 {
-    if (cpuIdx == IfxCpu_ResourceCpu_0)
-    {
-        /* Clear RCU flags if it was a cold reset */
-        if (IfxScuRcu_readRawResetStatus() & IFXSCURCU_POWERONRESET_MASK)
-        {
-            /* we had a cold reset, we need to clear the flags */
-            IfxScuRcu_clearColdResetStatus();
-        }
-
-        /* In case of wake up via vext ramp up, we clear the corresponding bit to avoid immediate wake up in case of standby entry */
-        if (PMS_PMSWSTAT2.B.PWRWKP == 1)
-        {
-            uint16 endinitSftyPw = IfxScuWdt_getSafetyWatchdogPassword();
-            IfxScuWdt_clearSafetyEndinit(endinitSftyPw);
-            PMS_PMSWSTATCLR.B.PWRWKPCLR = 1;
-            IfxScuWdt_setSafetyEndinit(endinitSftyPw);
-        }
-    }
-
-    ebcmInfo->pllFreq = IfxScuCcu_getPllFrequency();
-    ebcmInfo->cpuFreq = IfxScuCcu_getCpuFrequency(cpuIdx);
-    ebcmInfo->sysFreq = IfxScuCcu_getSpbFrequency();
-
-    switch (cpuIdx)
-    {
-        case IfxCpu_ResourceCpu_0: ebcmInfo->stmFreq = IfxStm_getFrequency(&MODULE_STM0); break;
-        case IfxCpu_ResourceCpu_1: ebcmInfo->stmFreq = IfxStm_getFrequency(&MODULE_STM1); break;
-        case IfxCpu_ResourceCpu_2: ebcmInfo->stmFreq = IfxStm_getFrequency(&MODULE_STM2); break;
-        default: while(1) __disable(); break;
-    }
-
-    EbcmHw_initLeds();
-    EbcmSch_initGpt12_monitor();
-    EbcmHw_initEbcmSafetyMechanisms();
-
-    EbcmHw_initWdt(WDT_RELOAD);
-
-
-    ebcmStatus.initComplete = TRUE;
-
+    vfwCheckpoint_A = 0U;
+    vfwCheckpoint_B = 0U;
 }
 
-void EbcmHw_initEbcmSafetyMechanisms(void)
- {
+void VFW_Precheck(VfwSignature sig)
+{
+    vfwCheckpoint_A += sig;
+}
 
-     // TODO: init safety mechanisms here like die temp sensor, FCE, LMU data integrity, CPU data, integrity, etc
 
-      return;
- }
+void VFW_Postcheck(VfwSignature sig)
+{
+    vfwCheckpoint_B -= sig;
+}
+
+boolean VFW_HasIntegrityCheckFailed(void)
+{
+    return VFW_integrityCheckFailed;
+}
+
+#pragma optimize 0
+boolean  VFW_IntegrityCheck(void)
+{
+    if ((vfwCheckpoint_A + vfwCheckpoint_B) != 0)
+    {
+        /* SAFETY VIOLATION: Execution path error */
+        IfxCpu_disableInterrupts();
+        IfxScuWdt_disableCpuWatchdog(IfxScuWdt_getCpuWatchdogPassword());
+        VFW_integrityCheckFailed = TRUE;
+        return FALSE;
+
+      //  __debug();
+    }
+
+    VFW_integrityCheckFailed = FALSE;
+
+    return TRUE;
+}
+
+#pragma endoptimize

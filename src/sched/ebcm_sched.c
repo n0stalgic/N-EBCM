@@ -40,6 +40,8 @@
 #include "ebcm_isr.h"
 #include "ebcm_main.h"
 #include "IfxGpt12.h"
+#include "IfxCpu_Trap.h"
+#include "vfw_checkpoint.h"
 #include <string.h>
 
 
@@ -109,15 +111,15 @@ volatile uint32 cpu2execTaskCounter;
 static Task taskTable[] =
 {
         /* ---------------------------- CORE0 TASKS START ---------------------------- */
-        [TASK_ID_C0_WDT] = { WDT_TASK_ID,   EbcmHw_svcWdt,     "EbcmHw_svcWdt",     1,    0,        5,   1,  0, TRUE  },
-        [TASK_ID_C0_LED] = { LED_TASK_ID,   EbcmHw_ledTask,    "EbcmHw_ledTask",    10,   0,        4,   10, 0, TRUE  },
+        [TASK_ID_C0_WDT] = { WDT_TASK_ID,   EbcmHw_svcWdt,     "EbcmHw_svcWdt",     1,    0,        5,   1,  0, VFW_TASK_SIGNATURE_WDT , TRUE  },
+        [TASK_ID_C0_LED] = { LED_TASK_ID,   EbcmHw_ledTask,    "EbcmHw_ledTask",    10,   0,        4,   10, 0, VFW_TASK_SIGNATURE_LED , TRUE  },
 
         /* ---------------------------- CORE1 TASKS START ---------------------------- */
 
         /* ---------------------------- CORE2 TASKS START ---------------------------- */
 
         /* ---------------------------- Sentinel ---------------------------- */
-        [TASK_COUNT] = { 0xFF,    NULL,     "NULL_TASK",              0  ,  0,        0,    0, FALSE }
+        [TASK_COUNT] = { 0xFF,    NULL,     "NULL_TASK",              0  ,  0,        0,    0,  VFW_NULL_SIGNATURE, FALSE }
 
 
 };
@@ -149,7 +151,7 @@ static inline void runWithUnboundedExecDetectionCore1(uint16 reload, void (*func
 /*---------------------------------------------Function Implementations----------------------------------------------*/
 /*********************************************************************************************************************/
 
-
+#pragma optimize 0
 static inline boolean isCurrentCoreTaskReady(IfxCpu_ResourceCpu currCore)
 {
     switch(currCore)
@@ -160,7 +162,8 @@ static inline boolean isCurrentCoreTaskReady(IfxCpu_ResourceCpu currCore)
         // maybe latch a software alarm here because something is very wrong.
         default:
         {
-            __debug();
+            /* SAFETY VIOLATION: Wrong CPU ID, future: trigger safe state */
+            ;
         }
     }
 
@@ -185,6 +188,11 @@ static inline void runWithUnboundedExecDetectionCore0(uint16 reload, void (*func
 
 static inline void runWithUnboundedExecDetectionCore1(uint16 reload, void (*func)(void))
 {
+    if (func == NULL)
+    {
+
+    }
+
     IfxGpt12_T2_run(&MODULE_GPT120, IfxGpt12_TimerRun_stop);
     IfxSrc_clearRequest(IfxGpt12_T2_getSrc(&MODULE_GPT120));
 
@@ -200,7 +208,7 @@ static inline void runWithUnboundedExecDetectionCore1(uint16 reload, void (*func
 }
 
 
-#pragma optimize 0
+
 void EbcmSch_Gpt12_core0DeadlineTripwireIsr(void)
 {
 
@@ -229,6 +237,8 @@ void EbcmSch_runTasks(IfxCpu_ResourceCpu cpuId)
 
     uint8 start, end;
     Ifx_STM* stm;
+
+    boolean vfw_status = FALSE;
 
     __disable();
     boolean isCurrentCoreReady = isCurrentCoreTaskReady(cpuId);
@@ -273,17 +283,27 @@ void EbcmSch_runTasks(IfxCpu_ResourceCpu cpuId)
 
                     if (cpuId == IfxCpu_ResourceCpu_0)
                     {
+                        VFW_Precheck(targetTask->checkpointSignature);
                         runWithUnboundedExecDetectionCore0(targetTask->deadlineGuardReload, targetTask->func);
+                        VFW_Postcheck(targetTask->checkpointSignature);
+                        VFW_IntegrityCheck();
+
                     }
 
                     else if (cpuId == IfxCpu_ResourceCpu_1)
                     {
+                        VFW_Precheck(targetTask->checkpointSignature);
                         runWithUnboundedExecDetectionCore1(targetTask->deadlineGuardReload, targetTask->func);
+                        VFW_Postcheck(targetTask->checkpointSignature);
+                        VFW_IntegrityCheck();
                     }
                 }
             }
         }
     }
+
+
+
 
     /* in a less stringent scheduler setup, you could make the flag(s) an actual counter, run tasks and decrement it
      * until it hits zero to allow the scheduler to run until its caught up on overruns. however,
@@ -301,7 +321,17 @@ void EbcmSch_runTasks(IfxCpu_ResourceCpu cpuId)
     {
         cpu1execTaskCounter--;
     }
-    __enable();
+
+    /* don't allow scheduler and other interrupts to continue if we don't have program execution
+     * integrity. in the future this will apply a safe state and ideally we'll be taken to an NMI for further
+     * handling
+     */
+    if (!VFW_HasIntegrityCheckFailed())
+    {
+        __enable();
+
+    }
+
 }
 
 #pragma endoptimize
@@ -417,7 +447,7 @@ void EbcmSch_InitStm(EbcmStmCfg* ebcmStm, IfxCpu_ResourceCpu cpuIdx)
         default:
             while(1)
             {
-                __debug();
+                __disable();
             }
 
             break;

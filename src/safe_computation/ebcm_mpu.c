@@ -1,0 +1,288 @@
+/******************************************************************************
+ * @file    ebcm_mpu.c
+ * @brief   Add brief here
+ *
+ * MIT License
+ *
+ * Copyright (c) 2026 n0stalgic
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ *****************************************************************************/
+
+
+/*********************************************************************************************************************/
+/*-----------------------------------------------------Includes------------------------------------------------------*/
+/*********************************************************************************************************************/
+
+#include "ebcm_mpu.h"
+
+/*********************************************************************************************************************/
+/*------------------------------------------------------Macros-------------------------------------------------------*/
+/*********************************************************************************************************************/
+
+/*********************************************************************************************************************/
+/*-------------------------------------------------Global variables--------------------------------------------------*/
+/*********************************************************************************************************************/
+
+/*********************************************************************************************************************/
+/*--------------------------------------------Private Variables/Constants--------------------------------------------*/
+/*********************************************************************************************************************/
+
+/*********************************************************************************************************************/
+/*------------------------------------------------Function Prototypes------------------------------------------------*/
+/*********************************************************************************************************************/
+
+/*********************************************************************************************************************/
+/*---------------------------------------------Function Implementations----------------------------------------------*/
+/*********************************************************************************************************************/
+
+/* Function that enables the memory protection
+ * Make sure to define code and data protection ranges before calling this function.
+ *
+ * In this function two intrinsic functions, __mfcr() and __mtcr() are called, to access control registers.
+ * The intrinsic function __mfcr(int cfsr) moves contents of the addressed Core Special Function Register (CSFR)
+ * into a data register.
+ * The intrinsic function __mtcr(int csfr, int val) moves contents of a data register (second int) to the addressed
+ * CSFR (first int).
+ * The ISYNC instruction ensures that the effects of the CSFR update are correctly seen by all following instructions.
+ *
+ * The Tasking intrinsic function for MTCR automatically includes an ISYNC instruction.
+ * ISYNC for other compiler vendors is ensured by use of a preprocessor macro.
+ */
+
+void enable_memory_protection()
+{
+    Ifx_CPU_SYSCON sysconValue;
+    sysconValue.U = __mfcr(CPU_SYSCON);                 /* Get the System Configuration Register (SYSCON) value     */
+    sysconValue.B.PROTEN = 1;                            /* Set the PROTEN bitfield to enable the Memory Protection */
+    __mtcr(CPU_SYSCON, sysconValue.U);                  /* Set the Core Configuration Register (SYSCON)           */
+
+
+}
+
+/* Function that defines a data protection range in the corresponding CPU Data Protection Range Register (DPR).
+ * Data protection ranges have 8-byte granularity.
+ * As a result, the lower 3 bits of any address passed to the define_data_protection_range function will be discarded.
+ * After enabling the Memory Protection, access to an address 'x' will be allowed only if:
+ * lowerBoundAddress <= x < upperBoundAddress
+ */
+void define_data_protection_range(uint32 lowerBoundAddress, uint32 upperBoundAddress, uint8 range)
+{
+    switch(range)
+    {
+        case 0: /* Data Protection Range 0 */
+            __mtcr(CPU_DPR0_L, lowerBoundAddress);      /* Set the lower bound of CPU Data Protection Range 0       */
+            __mtcr(CPU_DPR0_U, upperBoundAddress);      /* Set the upper bound of CPU Data Protection Range 0       */
+            break;
+        case 1: /* Data Protection Range 1 */
+            __mtcr(CPU_DPR1_L, lowerBoundAddress);      /* Set the lower bound of CPU Data Protection Range 1       */
+            __mtcr(CPU_DPR1_U, upperBoundAddress);      /* Set the upper bound of CPU Data Protection Range 1       */
+            break;
+        case 2: /* Data Protection Range 2 */
+            __mtcr(CPU_DPR2_L, lowerBoundAddress);      /* Set the lower bound of CPU Data Protection Range 2       */
+            __mtcr(CPU_DPR2_U, upperBoundAddress);      /* Set the upper bound of CPU Data Protection Range 2       */
+            break;
+        case 3: /* Data Protection Range 3 */
+            __mtcr(CPU_DPR3_L, lowerBoundAddress);      /* Set the lower bound of CPU Data Protection Range 3       */
+            __mtcr(CPU_DPR3_U, upperBoundAddress);      /* Set the upper bound of CPU Data Protection Range 3       */
+            break;
+        case 4: /* Data Protection Range 4 */
+            __mtcr(CPU_DPR4_L, lowerBoundAddress);      /* Set the lower bound of CPU Data Protection Range 4       */
+            __mtcr(CPU_DPR4_U, upperBoundAddress);      /* Set the upper bound of CPU Data Protection Range 4       */
+            break;
+        case 5: /* Data Protection Range 5 */
+            __mtcr(CPU_DPR5_L, lowerBoundAddress);      /* Set the lower bound of CPU Data Protection Range 5       */
+            __mtcr(CPU_DPR5_U, upperBoundAddress);      /* Set the upper bound of CPU Data Protection Range 5       */
+            break;
+        case 6: /* Data Protection Range 6 */
+            __mtcr(CPU_DPR6_L, lowerBoundAddress);      /* Set the lower bound of CPU Data Protection Range 6       */
+            __mtcr(CPU_DPR6_U, upperBoundAddress);      /* Set the upper bound of CPU Data Protection Range 6       */
+            break;
+        case 7: /* Data Protection Range 7 */
+            __mtcr(CPU_DPR7_L, lowerBoundAddress);      /* Set the lower bound of CPU Data Protection Range 7       */
+            __mtcr(CPU_DPR7_U, upperBoundAddress);      /* Set the upper bound of CPU Data Protection Range 7       */
+            break;
+        case 8: /* Data Protection Range 8 */
+            __mtcr(CPU_DPR8_L, lowerBoundAddress);      /* Set the lower bound of CPU Data Protection Range 8       */
+            __mtcr(CPU_DPR8_U, upperBoundAddress);      /* Set the upper bound of CPU Data Protection Range 8       */
+            break;
+        case 9: /* Data Protection Range 9 */
+            __mtcr(CPU_DPR9_L, lowerBoundAddress);      /* Set the lower bound of CPU Data Protection Range 9       */
+            __mtcr(CPU_DPR9_U, upperBoundAddress);      /* Set the upper bound of CPU Data Protection Range 9       */
+            break;
+        case 10: /* Data Protection Range 10 */
+            __mtcr(CPU_DPR10_L, lowerBoundAddress);     /* Set the lower bound of CPU Data Protection Range 10      */
+            __mtcr(CPU_DPR10_U, upperBoundAddress);     /* Set the upper bound of CPU Data Protection Range 10      */
+            break;
+        case 11: /* Data Protection Range 11 */
+            __mtcr(CPU_DPR11_L, lowerBoundAddress);     /* Set the lower bound of CPU Data Protection Range 11      */
+            __mtcr(CPU_DPR11_U, upperBoundAddress);     /* Set the upper bound of CPU Data Protection Range 11      */
+            break;
+        case 12: /* Data Protection Range 12 */
+            __mtcr(CPU_DPR12_L, lowerBoundAddress);     /* Set the lower bound of CPU Data Protection Range 12      */
+            __mtcr(CPU_DPR12_U, upperBoundAddress);     /* Set the upper bound of CPU Data Protection Range 12      */
+            break;
+        case 13: /* Data Protection Range 13 */
+            __mtcr(CPU_DPR13_L, lowerBoundAddress);     /* Set the lower bound of CPU Data Protection Range 13      */
+            __mtcr(CPU_DPR13_U, upperBoundAddress);     /* Set the upper bound of CPU Data Protection Range 13      */
+            break;
+        case 14: /* Data Protection Range 14 */
+            __mtcr(CPU_DPR14_L, lowerBoundAddress);     /* Set the lower bound of CPU Data Protection Range 14      */
+            __mtcr(CPU_DPR14_U, upperBoundAddress);     /* Set the upper bound of CPU Data Protection Range 14      */
+            break;
+        case 15: /* Data Protection Range 15 */
+            __mtcr(CPU_DPR15_L, lowerBoundAddress);     /* Set the lower bound of CPU Data Protection Range 15      */
+            __mtcr(CPU_DPR15_U, upperBoundAddress);     /* Set the upper bound of CPU Data Protection Range 15      */
+            break;
+        case 16: /* Data Protection Range 16 */
+            __mtcr(CPU_DPR16_L, lowerBoundAddress);     /* Set the lower bound of CPU Data Protection Range 16      */
+            __mtcr(CPU_DPR16_U, upperBoundAddress);     /* Set the upper bound of CPU Data Protection Range 16      */
+            break;
+        case 17: /* Data Protection Range 17 */
+            __mtcr(CPU_DPR17_L, lowerBoundAddress);     /* Set the lower bound of CPU Data Protection Range 17      */
+            __mtcr(CPU_DPR17_U, upperBoundAddress);     /* Set the upper bound of CPU Data Protection Range 17      */
+            break;
+        default:
+            break;
+    }
+
+#if !defined(__TASKING__)
+    __isync();
+#endif
+}
+
+/* Function that defines a code protection range in the corresponding CPU Code Protection Range Register (CPR).
+ * Code protection ranges have 32-byte granularity.
+ * As a result, the lower 5 bits of any address passed to the define_code_protection_range function will be discarded.
+ * After enabling the Memory Protection, access to an address 'x' will be allowed only if:
+ * lowerBoundAddress <= x < upperBoundAddress
+ */
+void define_code_protection_range(uint32 lowerBoundAddress, uint32 upperBoundAddress, uint8 range)
+{
+    switch(range)
+    {
+        case 0: /* Code Protection Range 0 */
+            __mtcr(CPU_CPR0_L, lowerBoundAddress);      /* Set the lower bound of CPU Code Protection Range 0       */
+            __mtcr(CPU_CPR0_U, upperBoundAddress);      /* Set the upper bound of CPU Code Protection Range 0       */
+            break;
+        case 1: /* Code Protection Range 1 */
+            __mtcr(CPU_CPR1_L, lowerBoundAddress);      /* Set the lower bound of CPU Code Protection Range 1       */
+            __mtcr(CPU_CPR1_U, upperBoundAddress);      /* Set the upper bound of CPU Code Protection Range 1       */
+
+            break;
+        case 2: /* Code Protection Range 2 */
+            __mtcr(CPU_CPR2_L, lowerBoundAddress);      /* Set the lower bound of CPU Code Protection Range 2       */
+            __mtcr(CPU_CPR2_U, upperBoundAddress);      /* Set the upper bound of CPU Code Protection Range 2       */
+
+            break;
+        case 3: /* Code Protection Range 3 */
+            __mtcr(CPU_CPR3_L, lowerBoundAddress);      /* Set the lower bound of CPU Code Protection Range 3       */
+            __mtcr(CPU_CPR3_U, upperBoundAddress);      /* Set the upper bound of CPU Code Protection Range 3       */
+            break;
+        case 4: /* Code Protection Range 4 */
+            __mtcr(CPU_CPR4_L, lowerBoundAddress);      /* Set the lower bound of CPU Code Protection Range 4       */
+            __mtcr(CPU_CPR4_U, upperBoundAddress);      /* Set the upper bound of CPU Code Protection Range 4       */
+            break;
+        case 5: /* Code Protection Range 5 */
+            __mtcr(CPU_CPR5_L, lowerBoundAddress);      /* Set the lower bound of CPU Code Protection Range 5       */
+            __mtcr(CPU_CPR5_U, upperBoundAddress);      /* Set the upper bound of CPU Code Protection Range 5       */
+            break;
+        case 6: /* Code Protection Range 6 */
+            __mtcr(CPU_CPR6_L, lowerBoundAddress);      /* Set the lower bound of CPU Code Protection Range 6       */
+            __mtcr(CPU_CPR6_U, upperBoundAddress);      /* Set the upper bound of CPU Code Protection Range 6       */
+            break;
+        case 7: /* Code Protection Range 7 */
+            __mtcr(CPU_CPR7_L, lowerBoundAddress);      /* Set the lower bound of CPU Code Protection Range 7       */
+            __mtcr(CPU_CPR7_U, upperBoundAddress);      /* Set the upper bound of CPU Code Protection Range 7       */
+            break;
+        case 8: /* Code Protection Range 8 */
+            __mtcr(CPU_CPR8_L, lowerBoundAddress);      /* Set the lower bound of CPU Code Protection Range 8       */
+            __mtcr(CPU_CPR8_U, upperBoundAddress);      /* Set the upper bound of CPU Code Protection Range 8       */
+            break;
+        case 9: /* Code Protection Range 9 */
+            __mtcr(CPU_CPR9_L, lowerBoundAddress);      /* Set the lower bound of CPU Code Protection Range 9       */
+            __mtcr(CPU_CPR9_U, upperBoundAddress);      /* Set the upper bound of CPU Code Protection Range 9       */
+            break;
+        default:
+            break;
+    }
+
+}
+
+
+/* Function to enable code execution access to a predefined Range in a Protection Set */
+void enable_code_execution(uint8 protectionSet, uint8 range)
+{
+    Ifx_CPU_CPXE CPXERegisterValue;
+
+    /* Get the CPU Code Protection Execute Enable Register value */
+    switch(protectionSet)
+    {
+        case 0: /* Protection Set 0 */
+            CPXERegisterValue.U = __mfcr(CPU_CPXE_0);
+            break;
+        case 1: /* Protection Set 1 */
+            CPXERegisterValue.U = __mfcr(CPU_CPXE_1);
+            break;
+        case 2: /* Protection Set 2 */
+            CPXERegisterValue.U = __mfcr(CPU_CPXE_2);
+            break;
+        case 3: /* Protection Set 3 */
+            CPXERegisterValue.U = __mfcr(CPU_CPXE_3);
+            break;
+        case 4: /* Protection Set 4 */
+            CPXERegisterValue.U = __mfcr(CPU_CPXE_4);
+            break;
+        case 5: /* Protection Set 5 */
+            CPXERegisterValue.U = __mfcr(CPU_CPXE_5);
+            break;
+        default:
+            break;
+    }
+
+    /* Set the bit corresponding to the given Code Protection Range */
+    CPXERegisterValue.U |= (0x1 << range);
+
+    /* Set the CPU Code Protection Execute Enable Register value to enable code execution */
+    switch(protectionSet)
+    {
+        case 0: /* Protection Set 0 */
+            __mtcr(CPU_CPXE_0, CPXERegisterValue.U);
+            break;
+        case 1: /* Protection Set 1 */
+            __mtcr(CPU_CPXE_1, CPXERegisterValue.U);
+            break;
+        case 2: /* Protection Set 2 */
+            __mtcr(CPU_CPXE_2, CPXERegisterValue.U);
+            break;
+        case 3: /* Protection Set 3 */
+            __mtcr(CPU_CPXE_3, CPXERegisterValue.U);
+            break;
+        case 4: /* Protection Set 4 */
+            __mtcr(CPU_CPXE_4, CPXERegisterValue.U);
+            break;
+        case 5: /* Protection Set 5 */
+            __mtcr(CPU_CPXE_5, CPXERegisterValue.U);
+
+            break;
+        default:
+            break;
+    }
+
+}

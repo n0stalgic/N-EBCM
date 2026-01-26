@@ -37,6 +37,7 @@
 #include "ebcm_wdt.h"
 #include "ebcm_led.h"
 #include "Ifx_Fifo.h"
+#include "vfw_checkpoint.h"
 
 /*********************************************************************************************************************/
 /*------------------------------------------------------Macros-------------------------------------------------------*/
@@ -71,6 +72,7 @@ typedef struct
        const uint32 wcetUs;
        uint32 countdown;
        uint16 deadlineGuardReload;
+       VfwSignature checkpointSignature;
        uint8  enabled;
 
 
