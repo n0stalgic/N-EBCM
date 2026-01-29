@@ -1,28 +1,10 @@
 /******************************************************************************
  * @file    sched.c
- * @brief   Add brief here
+ * @brief   Scheduler Implementation
  *
  * MIT License
  *
  * Copyright (c) 2026 n0stalgic
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
  *****************************************************************************/
 
 
@@ -111,15 +93,15 @@ volatile uint32 cpu2execTaskCounter;
 static Task taskTable[] =
 {
         /* ---------------------------- CORE0 TASKS START ---------------------------- */
-        [TASK_ID_C0_WDT] = { WDT_TASK_ID,   EbcmHw_svcWdt,     "EbcmHw_svcWdt",     1,    0,        5,   1,  0, VFW_TASK_SIGNATURE_WDT , TRUE  },
-        [TASK_ID_C0_LED] = { LED_TASK_ID,   EbcmHw_ledTask,    "EbcmHw_ledTask",    10,   0,        4,   10, 0, VFW_TASK_SIGNATURE_LED , TRUE  },
+        [TASK_ID_C0_WDT] = { WDT_TASK_ID,   EbcmHw_svcWdt,     "EbcmHw_svcWdt",     1,    0,        5,   1,  0, TRUE  },
+        [TASK_ID_C0_LED] = { LED_TASK_ID,   EbcmHw_ledTask,    "EbcmHw_ledTask",    10,   0,        4,   10, 0, TRUE  },
 
         /* ---------------------------- CORE1 TASKS START ---------------------------- */
 
         /* ---------------------------- CORE2 TASKS START ---------------------------- */
 
         /* ---------------------------- Sentinel ---------------------------- */
-        [TASK_COUNT] = { 0xFF,    NULL,     "NULL_TASK",              0  ,  0,        0,    0,  VFW_NULL_SIGNATURE, FALSE }
+        [TASK_COUNT] = { 0xFF,    NULL,     "NULL_TASK",              0  ,  0,        0,    0, FALSE }
 
 
 };
@@ -238,8 +220,6 @@ void EbcmSch_runTasks(IfxCpu_ResourceCpu cpuId)
     uint8 start, end;
     Ifx_STM* stm;
 
-    boolean vfw_status = FALSE;
-
     __disable();
     boolean isCurrentCoreReady = isCurrentCoreTaskReady(cpuId);
     __enable();
@@ -283,18 +263,14 @@ void EbcmSch_runTasks(IfxCpu_ResourceCpu cpuId)
 
                     if (cpuId == IfxCpu_ResourceCpu_0)
                     {
-                        VFW_Precheck(targetTask->checkpointSignature);
                         runWithUnboundedExecDetectionCore0(targetTask->deadlineGuardReload, targetTask->func);
-                        VFW_Postcheck(targetTask->checkpointSignature);
                         VFW_IntegrityCheck();
 
                     }
 
                     else if (cpuId == IfxCpu_ResourceCpu_1)
                     {
-                        VFW_Precheck(targetTask->checkpointSignature);
                         runWithUnboundedExecDetectionCore1(targetTask->deadlineGuardReload, targetTask->func);
-                        VFW_Postcheck(targetTask->checkpointSignature);
                         VFW_IntegrityCheck();
                     }
                 }
@@ -427,21 +403,18 @@ void EbcmSch_InitStm(EbcmStmCfg* ebcmStm, IfxCpu_ResourceCpu cpuIdx)
             ebcmStm->stmSfr = &MODULE_STM0;
             ebcmStm->stmConfig.typeOfService = IfxSrc_Tos_cpu0;
             ebcmStm->stmConfig.triggerPriority = ISR_PRIORITY_OS_TICK;
-            memset(&taskOverrunDataFifos[0], 0, sizeof(taskOverrunDataFifos[0]) / sizeof(DeadlineViolationReport));
             break;
 
         case IfxCpu_ResourceCpu_1:
             ebcmStm->stmSfr = &MODULE_STM1;
             ebcmStm->stmConfig.typeOfService = IfxSrc_Tos_cpu1;
             ebcmStm->stmConfig.triggerPriority = ISR_PRIORITY_OS_TICK;
-            memset(&taskOverrunDataFifos[1], 0, sizeof(taskOverrunDataFifos[1]) / sizeof(DeadlineViolationReport));
             break;
 
         case IfxCpu_ResourceCpu_2:
             ebcmStm->stmSfr = &MODULE_STM2;
             ebcmStm->stmConfig.typeOfService = IfxSrc_Tos_cpu2;
             ebcmStm->stmConfig.triggerPriority = ISR_PRIORITY_OS_TICK;
-            memset(&taskOverrunDataFifos[2], 0, sizeof(taskOverrunDataFifos[2]) / sizeof(DeadlineViolationReport));
             break;
 
         default:

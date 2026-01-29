@@ -40,6 +40,9 @@
 
 #define LCF_HEAP_SIZE  4k
 
+#define VFW_SAFE_BUFFER_REGION_SIZE 512
+#define VFW_SAFE_SIZE  4k
+
 #define LCF_CPU0 0
 #define LCF_CPU1 1
 #define LCF_CPU2 2
@@ -58,12 +61,6 @@
 #define LCF_DSPR0_START 0x70000000
 #define LCF_DSPR0_SIZE  240k
 
-#define LCF_DSPR0_SAFE_BRK_START 0x7003c000
-#define LCF_DSPR0_SAFE_BRK_SIZE  10k
-
-#define LCF_DSPR0_SAFE_BRK_CMPL_START 0x7003e800
-#define LCF_DSPR0_SAFE_BRK_CMPL_SIZE  10k
-
 #define LCF_CSA2_OFFSET     (LCF_DSPR2_SIZE - 1k - LCF_CSA2_SIZE)
 #define LCF_ISTACK2_OFFSET  (LCF_CSA2_OFFSET - 256 - LCF_ISTACK2_SIZE)
 #define LCF_USTACK2_OFFSET  (LCF_ISTACK2_OFFSET - 256 - LCF_USTACK2_SIZE)
@@ -72,13 +69,16 @@
 #define LCF_ISTACK1_OFFSET  (LCF_CSA1_OFFSET - 256 - LCF_ISTACK1_SIZE)
 #define LCF_USTACK1_OFFSET  (LCF_ISTACK1_OFFSET - 256 - LCF_USTACK1_SIZE)
 
-#define LCF_CSA0_OFFSET     (LCF_DSPR0_SIZE - 1k - LCF_CSA0_SIZE - LCF_DSPR0_SAFE_BRK_SIZE - LCF_DSPR0_SAFE_BRK_CMPL_SIZE)
+#define LCF_CSA0_OFFSET     (LCF_DSPR0_SIZE - 1k - LCF_CSA0_SIZE)
 #define LCF_ISTACK0_OFFSET  (LCF_CSA0_OFFSET - 256 - LCF_ISTACK0_SIZE)
 #define LCF_USTACK0_OFFSET  (LCF_ISTACK0_OFFSET - 256 - LCF_USTACK0_SIZE)
 
 #define LCF_HEAP0_OFFSET    (LCF_USTACK0_OFFSET - LCF_HEAP_SIZE)
 #define LCF_HEAP1_OFFSET    (LCF_USTACK1_OFFSET - LCF_HEAP_SIZE)
 #define LCF_HEAP2_OFFSET    (LCF_USTACK2_OFFSET - LCF_HEAP_SIZE)
+
+#define VFW_SAFE0_OFFSET     (LCF_HEAP0_OFFSET - VFW_SAFE_BUFFER_REGION_SIZE - VFW_SAFE_SIZE)
+#define VFW_SAFE1_OFFSET     (LCF_HEAP1_OFFSET - VFW_SAFE_BUFFER_REGION_SIZE - VFW_SAFE_SIZE)
 
 #define LCF_INTVEC0_START 0x802FE000
 #define LCF_INTVEC1_START 0x805FC000
@@ -196,28 +196,10 @@ derivative tc37
     memory dsram0 // Data Scratch Pad Ram
     {
         mau = 8;
-        size = 220k;
+        size = 240k;
         type = ram;
-        map (dest=bus:tc0:fpi_bus, dest_offset=0xd0000000, size=220k, priority=8);
-        map (dest=bus:sri, dest_offset=0x70000000, size=220k);
-    }
-
-    memory dsram0_safe_brk // Data Scratch Pad Ram
-    {
-        mau = 8;
-        size = 10k;
-        type = ram;
-        map (dest=bus:tc0:fpi_bus, dest_offset=0xd003c000, size=10k, priority=8);
-      //  map (dest=bus:sri, dest_offset=0x7003c000, size=10k); don't expose this memory on the SRI bus. keep it local to core0 only
-    }
-
-    memory dsram0_safe_brk_cmpl // Data Scratch Pad Ram
-    {
-        mau = 8;
-        size = 10k;
-        type = ram;
-        map (dest=bus:tc0:fpi_bus, dest_offset=0xd003e800, size=10k, priority=8);
-      //  map (dest=bus:sri, dest_offset=0x7003e800, size=10k); don't expose this memory on the SRI bus. keep it local to core0 only
+        map (dest=bus:tc0:fpi_bus, dest_offset=0xd0000000, size=240k, priority=8);
+        map (dest=bus:sri, dest_offset=0x70000000, size=240k);
     }
 
     memory psram0 // Program Scratch Pad Ram
@@ -343,20 +325,6 @@ derivative tc37
 
     /*Sections located at absolute fixed address*/
 
-    section_layout mpe:vtc:linear
-    {
-        group DSRAM0_SAFE (ordered, contiguous, run_addr=mem:dsram0_safe_brk)
-        {
-            select ".data.dsram0_safe_brk";
-        }
-
-        group DSRAM0_SAFE_CMPL (ordered, contiguous, run_addr=mem:dsram0_safe_brk_cmpl)
-        {
-
-            select ".data.dsram0_safe_brk_cmpl";
-        }
-    }
-
     section_layout :vtc:linear
     {
         /*Fixed memory Allocations for stack memory and CSA*/
@@ -404,7 +372,7 @@ derivative tc37
         }
         group (ordered)
         {
-            group ustack0(align = 8, run_addr = mem:dsram0[LCF_USTACK0_OFFSET])
+            group ustack0(align = 8, run_addr = mem:dsram0[LCF_USTACK0_OFFSET], fill=0xDEADBEEF)
             {
                 stack "ustack_tc0" (size = LCF_USTACK0_SIZE);
             }
@@ -766,6 +734,14 @@ derivative tc37
                     select ".bss.Cpu0_Main.*";
                     select "(.bss.bss_cpu0|.bss.bss_cpu0.*)";
                 }
+
+                // Set safe data below the heap with a 512 byte buffer region
+                group vfw_safe0 (ordered, run_addr=mem:dsram0[VFW_SAFE0_OFFSET])
+                {
+                    select ".data.vfw_*.*";
+                    select ".bss.vfw_*.*";
+                }
+
             }
 
             /*LMU Data sections*/

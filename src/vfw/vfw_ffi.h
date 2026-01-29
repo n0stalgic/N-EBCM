@@ -25,8 +25,8 @@
  * SOFTWARE.
  *****************************************************************************/
 
-#ifndef SAFE_COMPUTATION_EBCM_MPU_H_
-#define SAFE_COMPUTATION_EBCM_MPU_H_
+#ifndef VFW_FFI_H_
+#define VFW_FFI_H_
 
 /*********************************************************************************************************************/
 /*-----------------------------------------------------Includes------------------------------------------------------*/
@@ -114,12 +114,12 @@
 /*********************************************************************************************************************/
 
 /* MPU control functions */
-void enable_memory_protection(void);
-void define_data_protection_range(uint32 lowerBoundAddress, uint32 upperBoundAddress, uint8 range);
-void define_code_protection_range(uint32 lowerBoundAddress, uint32 upperBoundAddress, uint8 range);
-void enable_data_read(uint8 protectionSet, uint8 range);
-void enable_data_write(uint8 protectionSet, uint8 range);
-void enable_code_execution(uint8 protectionSet, uint8 range);
+void VFW_enableMemProtection(void);
+void VFW_defineDataProtectionRange(uint32 lowerBoundAddress, uint32 upperBoundAddress, uint8 range);
+void VFW_defineCodeProtectionRange(uint32 lowerBoundAddress, uint32 upperBoundAddress, uint8 range);
+void VFW_enableDataRead(uint8 protectionSet, uint8 range);
+void VFW_enableDataWrite(uint8 protectionSet, uint8 range);
+void VFW_enableCodeExecution(uint8 protectionSet, uint8 range);
 
 /*********************************************************************************************************************/
 /*---------------------------------------------Function Implementations----------------------------------------------*/
@@ -142,4 +142,4 @@ IFX_INLINE void set_active_protection_set(uint8 protectionSet)
 }
 
 
-#endif /* SAFE_COMPUTATION_EBCM_MPU_H_ */
+#endif /* VFW_FFI_H_ */

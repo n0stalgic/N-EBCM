@@ -36,52 +36,67 @@
 #include "IfxPort.h"
 #include "IfxScu_reg.h"
 #include "ebcm_main.h"
-#include "ebcm_sched.h"
 #include "ssw.h"
 
 /*********************************************************************************************************************/
 /*------------------------------------------------------Macros-------------------------------------------------------*/
 /*********************************************************************************************************************/
 /* Communication parameters */
-#define ISR_PRIORITY_ASCLIN_TX      10                                       /* Priority for interrupt ISR Transmit  */
+#define ISR_PRIORITY_ASCLIN_TX      8                                       /* Priority for interrupt ISR Transmit  */
 #define ISR_PRIORITY_ASCLIN_RX      4                                       /* Priority for interrupt ISR Receive   */
 #define ISR_PRIORITY_ASCLIN_ER      12                                      /* Priority for interrupt ISR Errors    */
 #define ASC_TX_BUFFER_SIZE          256                                     /* Define the TX buffer size in byte    */
 #define ASC_RX_BUFFER_SIZE          256                                     /* Define the RX buffer size in byte    */
 #define ASC_BAUDRATE                115200                                  /* Define the UART baud rate            */
 
+/* LEDs */
+#define LED1                        &MODULE_P00,5                           /* LED1                                 */
+#define LED2                        &MODULE_P00,6                           /* LED2                                 */
+
 /* Shell commands and help descriptions */
 #define COMMAND_INFO                "info"
+#define COMMAND_TOGGLE              "toggle"
+#define COMMAND_HELP                "help"
 #define COMMAND_SCHED               "sched"
+#define COMMAND_MEM                 "mem"
 #define COMMAND_SCHED_HELP_TEXT     "  : Display scheduler state and overruns"
-#define COMMAND_INFO_HELP_TEXT      "  : Show the boot up info"
+#define COMMAND_MEM_HELP_TEXT       "  : Display ECC stats"
+#define COMMAND_INFO_HELP_TEXT      "  : Show the example's info"
+#define COMMAND_TOGGLE_HELP_TEXT    "  : Command to toggle LEDs" ENDLINE \
+                                    "         The correct syntax for this command is" ENDLINE \
+                                    "         '" COMMAND_TOGGLE " [0/1/2]'"
+#define COMMAND_HELP_HELP_TEXT      "   : Show this help list"
 
 /*********************************************************************************************************************/
 /*------------------------------------------------Function Prototypes------------------------------------------------*/
 /*********************************************************************************************************************/
+void initLEDs(void);
 void initSerialInterface(void);
 void printInfo(IfxStdIf_DPipe *io);
 boolean printShellInfo(pchar args, void *data, IfxStdIf_DPipe *io);
+boolean toggleLEDsShell(pchar args, void *data, IfxStdIf_DPipe *io);
 
 /*********************************************************************************************************************/
 /*-------------------------------------------------Global variables--------------------------------------------------*/
 /*********************************************************************************************************************/
-IfxStdIf_DPipe gAscStandardInterface;                                     /* Standard interface object            */
-IfxAsclin_Asc gAsclin;                                                    /* ASCLIN module object                 */
-Ifx_Shell gShellInterface;                                                /* Shell interface object               */
-Ifx_Fifo taskOverrunDataFifos[3U];
+IfxStdIf_DPipe  g_ascStandardInterface;                                     /* Standard interface object            */
+IfxAsclin_Asc   g_asclin;                                                   /* ASCLIN module object                 */
+Ifx_Shell       g_shellInterface;                                           /* Shell interface object               */
 
 /* The transfer buffers allocate memory for the data itself and for FIFO runtime variables.
  * 8 more bytes have to be added to ensure a proper circular buffer handling independent from
  * the address to which the buffers have been located.
  */
-uint8 gUartTxBuffer[ASC_TX_BUFFER_SIZE + sizeof(Ifx_Fifo) + 8];
-uint8 gUartRxBuffer[ASC_RX_BUFFER_SIZE + sizeof(Ifx_Fifo) + 8];
+uint8 g_uartTxBuffer[ASC_TX_BUFFER_SIZE + sizeof(Ifx_Fifo) + 8];
+uint8 g_uartRxBuffer[ASC_RX_BUFFER_SIZE + sizeof(Ifx_Fifo) + 8];
 
 /* Array that stores the supported Shell commands */
-const Ifx_Shell_Command gShellCommands[] = {
-    {COMMAND_INFO,   COMMAND_INFO_HELP_TEXT,    &gShellInterface, &printShellInfo     },
-    {COMMAND_SCHED,  COMMAND_SCHED_HELP_TEXT,   &gShellInterface, &Ifx_Shell_showHelp},
+const Ifx_Shell_Command g_shellCommands[] = {
+    {COMMAND_INFO,   COMMAND_INFO_HELP_TEXT,    &g_shellInterface, &printShellInfo     },
+    {COMMAND_TOGGLE, COMMAND_TOGGLE_HELP_TEXT,  &g_shellInterface, &toggleLEDsShell    },
+    {COMMAND_HELP,   COMMAND_HELP_HELP_TEXT,    &g_shellInterface, &Ifx_Shell_showHelp },
+    {COMMAND_SCHED,  COMMAND_SCHED_HELP_TEXT,   &g_shellInterface, &Ifx_Shell_showHelp},
+    {COMMAND_MEM,    COMMAND_MEM_HELP_TEXT,   &g_shellInterface,   &Ifx_Shell_showHelp},
     IFX_SHELL_COMMAND_LIST_END
 };
 
@@ -103,46 +118,48 @@ IFX_INTERRUPT(asc0TxISR, 0, ISR_PRIORITY_ASCLIN_TX);
 
 void asc0TxISR(void)
 {
-    IfxStdIf_DPipe_onTransmit(&gAscStandardInterface);
+    IfxStdIf_DPipe_onTransmit(&g_ascStandardInterface);
 }
 
 IFX_INTERRUPT(asc0RxISR, 0, ISR_PRIORITY_ASCLIN_RX);
 
 void asc0RxISR(void)
 {
-    IfxStdIf_DPipe_onReceive(&gAscStandardInterface);
+    IfxStdIf_DPipe_onReceive(&g_ascStandardInterface);
 }
 
 IFX_INTERRUPT(asc0ErrISR, 0, ISR_PRIORITY_ASCLIN_ER);
 
 void asc0ErrISR(void)
 {
-    IfxStdIf_DPipe_onError(&gAscStandardInterface);
+    IfxStdIf_DPipe_onError(&g_ascStandardInterface);
 }
 
 /* Function to print info in the console */
 void printInfo(IfxStdIf_DPipe *io)
 {
     SswTestStatus status = ebcmStatus.sswStatus.lbistStatus;
-    const char* str = (const char*)EbcmSsw_getLbistResultStr(status);
+    const char* str = (const char*) EbcmSsw_getLbistResultStr(status);
 
-    uint8 core0LockstepEn = MODULE_SCU.LCLCON0.B.LS0;
-    uint8 core1LockstepEn = MODULE_SCU.LCLCON1.B.LS1;
-    uint8 monbistStatus    = PMS_MONBISTSTAT.B.TSTOK;
+    uint8 core0_lockstep_en = MODULE_SCU.LCLCON0.B.LS0;
+    uint8 core1_lockstep_en = MODULE_SCU.LCLCON1.B.LS1;
+    uint8 monbist_status    = PMS_MONBISTSTAT.B.TSTOK;
 
 
     IfxStdIf_DPipe_print(io, ENDLINE);
-    IfxStdIf_DPipe_print(io, "\r\nAnti-Lock Braking System FW Ver V0R0A     \r\n"ENDLINE);
-    IfxStdIf_DPipe_print(io, "\r\nCORE0 Lockstep         [%s]"ENDLINE, core0LockstepEn ? "ENABLED" : "DISABLED");
-    IfxStdIf_DPipe_print(io, "CORE1 Lockstep         [%s]"ENDLINE, core1LockstepEn ? "ENABLED" : "DISABLED");
+    IfxStdIf_DPipe_print(io, "Anti-Lock Braking System FW Ver V0R0A     "ENDLINE);
+    IfxStdIf_DPipe_print(io, "Debug shell executing from Core: %u"ENDLINE, __mfcr(CPU_CORE_ID));
+    IfxStdIf_DPipe_print(io, "\r\nCORE0 Lockstep         [%s]"ENDLINE, core0_lockstep_en ? "ENABLED" : "DISABLED");
+    IfxStdIf_DPipe_print(io, "CORE1 Lockstep         [%s]"ENDLINE, core1_lockstep_en ? "ENABLED" : "DISABLED");
     IfxStdIf_DPipe_print(io, "LBIST                  [%s]"ENDLINE, str);
-    IfxStdIf_DPipe_print(io, "MONBIST                [%s]"ENDLINE, monbistStatus ? "PASSED" : "FAILED");
+    IfxStdIf_DPipe_print(io, "MONBIST                [%s]"ENDLINE, monbist_status ? "PASSED" : "FAILED");
     IfxStdIf_DPipe_print(io, "MCU_FW                 [%s]"ENDLINE, ebcmStatus.sswStatus.mcuFwChkStatus == PASSED ? "PASSED" : "FAILED");
     IfxStdIf_DPipe_print(io, "MCU_STARTUP            [%s]"ENDLINE, ebcmStatus.sswStatus.mcuStartupStatus ? "OK" : "NOK");
     IfxStdIf_DPipe_print(io, "SMU_ALIVE_ALARM        [%s]"ENDLINE, ebcmStatus.sswStatus.aliveAlarmStatus ? "OK" : "NOK");
     IfxStdIf_DPipe_print(io, "SMU_REGISTER_MONITOR   [%s]"ENDLINE, ebcmStatus.smuStatus.regMonitorTestSmu ? "PASSED" : "FAILED");
     IfxStdIf_DPipe_print(io, "SRAM_BIST              [%s]\r\n"ENDLINE, ebcmStatus.sswStatus.mbistStatus  ? "PASSED" : "FAILED");
     IfxStdIf_DPipe_print(io, "Safe SW boot procedure completed.\r\n"ENDLINE);
+
 }
 
 /* Function to show information about the example through the shell */
@@ -150,6 +167,47 @@ boolean printShellInfo(pchar args, void *data, IfxStdIf_DPipe *io)
 {
     printInfo(io);
     return TRUE;
+}
+
+/* Function to toggle LEDs */
+boolean toggleLEDsShell(pchar args, void *data, IfxStdIf_DPipe *io)
+{
+    switch(args[0])
+    {
+        case '0': /* Turn on all LEDs */
+            IfxPort_setPinState(LED1, IfxPort_State_low);
+            IfxPort_setPinState(LED2, IfxPort_State_low);
+            IfxStdIf_DPipe_print(io, "Turned on all LEDs!" ENDLINE ENDLINE);
+            break;
+        case '1': /* Toggle LED1 */
+            IfxPort_setPinState(LED1, IfxPort_State_toggled);
+            IfxStdIf_DPipe_print(io, "Toggled LED1!" ENDLINE ENDLINE);
+            break;
+        case '2': /* Toggle LED2 */
+            IfxPort_setPinState(LED2, IfxPort_State_toggled);
+            IfxStdIf_DPipe_print(io, "Toggled LED2!" ENDLINE ENDLINE);
+            break;
+        default: /* Turn off all LEDs */
+            IfxPort_setPinState(LED1, IfxPort_State_high);
+            IfxPort_setPinState(LED2, IfxPort_State_high);
+            IfxStdIf_DPipe_print(io, "Command syntax not correct." ENDLINE \
+                    "The correct syntax for this command is" ENDLINE "    '" COMMAND_TOGGLE " [0/1/2]'" ENDLINE \
+                    "Turned off all LEDs!" ENDLINE);
+            return FALSE; /* Returning false triggers a Shell command error */
+    }
+    return TRUE;
+}
+
+/* Function to initialize GPIO pins for LEDs */
+void initLEDs(void)
+{
+    /* Initialize GPIO pins for LEDs */
+    IfxPort_setPinMode(LED1, IfxPort_Mode_outputPushPullGeneral);
+    IfxPort_setPinMode(LED2, IfxPort_Mode_outputPushPullGeneral);
+
+    /* Turn off all LEDs */
+    IfxPort_setPinState(LED1, IfxPort_State_high);
+    IfxPort_setPinState(LED2, IfxPort_State_high);
 }
 
 /* Function to initialize ASCLIN module */
@@ -189,56 +247,45 @@ void initSerialInterface(void)
     ascConf.pins = &pins;
 
     /* FIFO buffers configuration */
-    ascConf.txBuffer = gUartTxBuffer;                      /* Set the transmission buffer                          */
+    ascConf.txBuffer = g_uartTxBuffer;                      /* Set the transmission buffer                          */
     ascConf.txBufferSize = ASC_TX_BUFFER_SIZE;              /* Set the transmission buffer size                     */
-    ascConf.rxBuffer = gUartRxBuffer;                      /* Set the receiving buffer                             */
+    ascConf.rxBuffer = g_uartRxBuffer;                      /* Set the receiving buffer                             */
     ascConf.rxBufferSize = ASC_RX_BUFFER_SIZE;              /* Set the receiving buffer size                        */
 
     /* Init ASCLIN module */
-    IfxAsclin_Asc_initModule(&gAsclin, &ascConf);          /* Initialize the module with the given configuration   */
+    IfxAsclin_Asc_initModule(&g_asclin, &ascConf);          /* Initialize the module with the given configuration   */
 }
 
 /* Function to initialize the Shell */
 void initShellInterface(void)
 {
     /* Initialize the hardware peripherals */
+    initLEDs();
     initSerialInterface();
 
     /* Initialize the Standard Interface */
-    IfxStdIf_DPipe_ascInit(&gAscStandardInterface, &gAsclin);
+    IfxStdIf_DPipe_ascInit(&g_ascStandardInterface, &g_asclin);
 
     /* Initialize the Console */
-    Ifx_Console_init(&gAscStandardInterface);
+    Ifx_Console_init(&g_ascStandardInterface);
 
     /* Print info to the console */
-    printInfo(&gAscStandardInterface);
+    printInfo(&g_ascStandardInterface);
+    Ifx_Console_print(ENDLINE "Enter '" COMMAND_HELP "' to see the available commands" ENDLINE);
 
     /* Initialize the shell */
     Ifx_Shell_Config shellConf;
     Ifx_Shell_initConfig(&shellConf);                       /* Initialize the structure with default values         */
 
-    shellConf.standardIo = &gAscStandardInterface;         /* Set a pointer to the standard interface              */
-    shellConf.commandList[0] = &gShellCommands[0];         /* Set the supported command list                       */
+    shellConf.standardIo = &g_ascStandardInterface;         /* Set a pointer to the standard interface              */
+    shellConf.commandList[0] = &g_shellCommands[0];         /* Set the supported command list                       */
 
-    Ifx_Shell_init(&gShellInterface, &shellConf);          /* Initialize the Shell with the given configuration    */
+    Ifx_Shell_init(&g_shellInterface, &shellConf);          /* Initialize the Shell with the given configuration    */
 }
 
 /* Function to process the incoming received data */
 void runShellInterface(void)
 {
     /* Process the received data */
-    Ifx_Shell_process(&gShellInterface);
-
-    // will pull this out into its own diagnostics function/module, but okay for now
-    for (uint8 i = 0; i < 3; i++)
-    {
-      //  Ifx_SizeT count = Ifx_Fifo_read(&taskOverrunDataFifos[i], (void*) &report , 1, 0);
-
-      // if (count)
-        {
-
-        //     IfxStdIf_DPipe_print(&gAscStandardInterface, "CRITICAL: Scheduler overrun - task: %s elapsed time %llu\r\n", report.task.funcName, report.elapsedUs);
-
-        }
-    }
+    Ifx_Shell_process(&g_shellInterface);
 }

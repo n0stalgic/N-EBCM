@@ -1,5 +1,5 @@
 /******************************************************************************
- * @file    vfw_safram.h
+ * @file    vcom.h
  * @brief   Add brief here
  *
  * MIT License
@@ -25,8 +25,8 @@
  * SOFTWARE.
  *****************************************************************************/
 
-#ifndef VFW_VFW_SAFRAM_H_
-#define VFW_VFW_SAFRAM_H_
+#ifndef DIAG_VCOM_H_
+#define DIAG_VCOM_H_
 
 /*********************************************************************************************************************/
 /*-----------------------------------------------------Includes------------------------------------------------------*/
@@ -36,45 +36,9 @@
 /*------------------------------------------------------Macros-------------------------------------------------------*/
 /*********************************************************************************************************************/
 
-#define VFW_SAFRAM_DEF_BYTE_NEAR(_var) __attribute__((section("dsram0_safe_brk"))) __near uint8 _var
-#define VFW_SAFRAM_DEF_BYTE_NEAR_CMPL(_var) __attribute((section("dsram0_safe_brk_cmpl"))) __near uint8 _var
-#define VFW_SAFRAM_DEF_WORD_NEAR(_var) __attribute__((section("dsram0_safe_brk"))) __near uint16 _var
-#define VFW_SAFRAM_DEF_WORD_NEAR_CMPL(_var) __attribute((section("dsram0_safe_brk_cmpl"))) __near uint16 _var
-#define VFW_SAFRAM_DEF_DWORD_NEAR(_var) __attribute__((section("dsram0_safe_brk"))) __near uint32 _var
-#define VFW_SAFRAM_DEF_DWORD_NEAR_CMPL(_var) __attribute((section("dsram0_safe_brk_cmpl"))) __near uint32 _var
-#define VFW_SAFRAM_DEF_FLOAT32_NEAR(_var) __attribute__((section("dsram0_safe_brk"))) __near float32 _var
-#define VFW_SAFRAM_DEF_FLOAT32_NEAR_CMPL(_var) __attribute((section("dsram0_safe_brk_cmpl"))) __near float32 _var
+#define ENDLINE "\r\n"
 
-#define VFW_SAFRAM_COMPLMNT(_value)  (~(_value))
-
-#define VFW_SAFRAM_SET(_var, _value) \
-            do { \
-              (_var) = (_value); \
-              (_var##_cmpl) = (typeof(_var))VFW_SAFRAM_COMPLMNT(_value); \
-            } while (0)
-
-#define VFW_SAFRAM_GET(_var, _errorcb) \
-            ({ \
-                typeof(_var) _val = (_var); \
-                typeof(_var) _cmpl = (_var##_cmpl); \
-                if (_val != (typeof(_var))VFW_SAFRAM_COMPLMNT(_cmpl)) { \
-                    _errorcb(); \
-                } \
-                _val; \
-            })
-
-#define VFW_SAFRAM_GET_ATOMIC(_var, _errorcb) \
-            ({ \
-                __disable(); \
-                typeof(_var) _val = (_var); \
-                typeof(_var) _cmpl = (_var##_cmpl); \
-                __enable(); \
-                if (_val != (typeof(_var))VFW_SAFRAM_COMPLMNT(_cmpl)) { \
-                    _errorcb(); \
-                } \
-                _val; \
-            })
-
+#define DPRINTF   vcom_Print
 
 /*********************************************************************************************************************/
 /*-------------------------------------------------Global variables--------------------------------------------------*/
@@ -91,6 +55,10 @@
 /*********************************************************************************************************************/
 /*------------------------------------------------Function Prototypes------------------------------------------------*/
 /*********************************************************************************************************************/
+void init_UART(void);           /* Initialization function  */
+void send_UART_message(void);   /* Send function            */
+void vcom_Print(const char *format, ...);
 
 
-#endif /* VFW_VFW_SAFRAM_H_ */
+
+#endif /* DIAG_VCOM_H_ */

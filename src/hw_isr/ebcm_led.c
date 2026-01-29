@@ -5,24 +5,6 @@
  * MIT License
  *
  * Copyright (c) 2026 n0stalgic
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
  *****************************************************************************/
 
 
@@ -154,6 +136,10 @@ const LedPattern ledPatternAbsIndev = { .patternArray = (const uint8[])
 EbcmLedContext lc1;
 EbcmLedContext lc2;
 
+/* VFW Checkpoints */
+static VfwCheckpoint cp_led_task;
+static VfwCheckpoint cp_led_update;
+
 
 /*********************************************************************************************************************/
 /*------------------------------------------------Function Prototypes------------------------------------------------*/
@@ -166,6 +152,10 @@ EbcmLedContext lc2;
 /* Initialize GPIO pins for LEDs */
 void EbcmHw_initLeds(void)
 {
+    /* Initialize VFW Checkpoints */
+    VFW_CreateCheckpoint(&cp_led_task, "EbcmHw_ledTask");
+    VFW_CreateCheckpoint(&cp_led_update, "EbcmHw_updateLed");
+
     /* Initialize GPIO pins for LEDs */
     IfxPort_setPinMode(&MODULE_P00, EBCM_LED1, IfxPort_Mode_outputPushPullGeneral);
     IfxPort_setPinMode(&MODULE_P00, EBCM_LED2, IfxPort_Mode_outputPushPullGeneral);
@@ -196,7 +186,7 @@ void EbcmHw_setLedPattern(EbcmLedContext* ledContext, LedPattern pattern)
 
 void EbcmHw_updateLed(EbcmLedContext* ledContext)
 {
-    VFW_CHECKPOINT_ENTRY(VFW_FUNC_SIGNATURE_LED_UPDATE);
+    VFW_CheckpointEntry(&cp_led_update);
     if (ledContext != NULL)
     {
         uint8 val = ledContext->activePattern.patternArray[ledContext->count];
@@ -217,22 +207,16 @@ void EbcmHw_updateLed(EbcmLedContext* ledContext)
         }
 
     }
-    VFW_CHECKPOINT_EXIT(VFW_FUNC_SIGNATURE_LED_UPDATE);
+    VFW_CheckpointExit(&cp_led_update);
 
 }
 
 void EbcmHw_ledTask(void)
 {
-    VFW_CHECKPOINT_ENTRY(VFW_TASK_SIGNATURE_LED);
+    VFW_CheckpointEntry(&cp_led_task);
 
-    VFW_CHECKPOINT_PRECHECK(VFW_FUNC_SIGNATURE_LED_UPDATE);
     EbcmHw_updateLed(&lc1);
-    VFW_CHECKPOINT_POSTCHECK(VFW_FUNC_SIGNATURE_LED_UPDATE);
-
-    VFW_CHECKPOINT_PRECHECK(VFW_FUNC_SIGNATURE_LED_UPDATE);
     EbcmHw_updateLed(&lc2);
-    VFW_CHECKPOINT_POSTCHECK(VFW_FUNC_SIGNATURE_LED_UPDATE);
 
-    VFW_CHECKPOINT_EXIT(VFW_TASK_SIGNATURE_LED);
+    VFW_CheckpointExit(&cp_led_task);
 }
-

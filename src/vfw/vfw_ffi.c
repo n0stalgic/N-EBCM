@@ -30,7 +30,7 @@
 /*-----------------------------------------------------Includes------------------------------------------------------*/
 /*********************************************************************************************************************/
 
-#include "ebcm_mpu.h"
+#include <vfw_ffi.h>
 
 /*********************************************************************************************************************/
 /*------------------------------------------------------Macros-------------------------------------------------------*/
@@ -66,7 +66,7 @@
  * ISYNC for other compiler vendors is ensured by use of a preprocessor macro.
  */
 
-void enable_memory_protection()
+void VFW_enableMemProtection()
 {
     Ifx_CPU_SYSCON sysconValue;
     sysconValue.U = __mfcr(CPU_SYSCON);                 /* Get the System Configuration Register (SYSCON) value     */
@@ -82,7 +82,7 @@ void enable_memory_protection()
  * After enabling the Memory Protection, access to an address 'x' will be allowed only if:
  * lowerBoundAddress <= x < upperBoundAddress
  */
-void define_data_protection_range(uint32 lowerBoundAddress, uint32 upperBoundAddress, uint8 range)
+void VFW_defineDataProtectionRange(uint32 lowerBoundAddress, uint32 upperBoundAddress, uint8 range)
 {
     switch(range)
     {
@@ -162,9 +162,6 @@ void define_data_protection_range(uint32 lowerBoundAddress, uint32 upperBoundAdd
             break;
     }
 
-#if !defined(__TASKING__)
-    __isync();
-#endif
 }
 
 /* Function that defines a code protection range in the corresponding CPU Code Protection Range Register (CPR).
@@ -173,7 +170,7 @@ void define_data_protection_range(uint32 lowerBoundAddress, uint32 upperBoundAdd
  * After enabling the Memory Protection, access to an address 'x' will be allowed only if:
  * lowerBoundAddress <= x < upperBoundAddress
  */
-void define_code_protection_range(uint32 lowerBoundAddress, uint32 upperBoundAddress, uint8 range)
+void VFW_defineCodeProtectionRange(uint32 lowerBoundAddress, uint32 upperBoundAddress, uint8 range)
 {
     switch(range)
     {
@@ -227,7 +224,7 @@ void define_code_protection_range(uint32 lowerBoundAddress, uint32 upperBoundAdd
 
 
 /* Function to enable code execution access to a predefined Range in a Protection Set */
-void enable_code_execution(uint8 protectionSet, uint8 range)
+void VFW_enableCodeExecution(uint8 protectionSet, uint8 range)
 {
     Ifx_CPU_CPXE CPXERegisterValue;
 
@@ -286,3 +283,115 @@ void enable_code_execution(uint8 protectionSet, uint8 range)
     }
 
 }
+
+void VFW_enableDataRead(uint8 protectionSet, uint8 range)
+{
+    Ifx_CPU_DPRE DPRERegisterValue;
+
+    /* Get the CPU Data Protection Read Enable Register value */
+    switch(protectionSet)
+    {
+        case 0: /* Protection Set 0 */
+            DPRERegisterValue.U = __mfcr(CPU_DPRE_0);
+            break;
+        case 1: /* Protection Set 1 */
+            DPRERegisterValue.U = __mfcr(CPU_DPRE_1);
+            break;
+        case 2: /* Protection Set 2 */
+            DPRERegisterValue.U = __mfcr(CPU_DPRE_2);
+            break;
+        case 3: /* Protection Set 3 */
+            DPRERegisterValue.U = __mfcr(CPU_DPRE_3);
+            break;
+        case 4: /* Protection Set 4 */
+            DPRERegisterValue.U = __mfcr(CPU_DPRE_4);
+            break;
+        case 5: /* Protection Set 5 */
+            DPRERegisterValue.U = __mfcr(CPU_DPRE_5);
+            break;
+
+    }
+
+    DPRERegisterValue.B.RE_N |= (1 << range); /* Set the bit corresponding to the given Data Protection Range */
+
+    /* Set the CPU Data Protection Read Enable Register value to enable data read access */
+    switch(protectionSet)
+    {
+        case 0: /* Protection Set 0 */
+            __mtcr(CPU_DPRE_0, DPRERegisterValue.U);
+            break;
+        case 1: /* Protection Set 1 */
+            __mtcr(CPU_DPRE_1, DPRERegisterValue.U);
+            break;
+        case 2: /* Protection Set 2 */
+            __mtcr(CPU_DPRE_2, DPRERegisterValue.U);
+            break;
+        case 3: /* Protection Set 3 */
+            __mtcr(CPU_DPRE_3, DPRERegisterValue.U);
+            break;
+        case 4: /* Protection Set 4 */
+            __mtcr(CPU_DPRE_4, DPRERegisterValue.U);
+            break;
+        case 5: /* Protection Set 5 */
+            __mtcr(CPU_DPRE_5, DPRERegisterValue.U);
+            break;
+    }
+
+
+}
+
+void VFW_enableDataWrite(uint8 protectionSet, uint8 range)
+{
+    Ifx_CPU_DPWE DPWERegisterValue;
+
+       /* Get the CPU Data Protection Write Enable Register value */
+       switch(protectionSet)
+       {
+           case 0: /* Protection Set 0 */
+               DPWERegisterValue.U = __mfcr(CPU_DPWE_0);
+               break;
+           case 1: /* Protection Set 1 */
+               DPWERegisterValue.U = __mfcr(CPU_DPWE_1);
+               break;
+           case 2: /* Protection Set 2 */
+               DPWERegisterValue.U = __mfcr(CPU_DPWE_2);
+               break;
+           case 3: /* Protection Set 3 */
+               DPWERegisterValue.U = __mfcr(CPU_DPWE_3);
+               break;
+           case 4: /* Protection Set 4 */
+               DPWERegisterValue.U = __mfcr(CPU_DPWE_4);
+               break;
+           case 5: /* Protection Set 5 */
+               DPWERegisterValue.U = __mfcr(CPU_DPWE_5);
+               break;
+       }
+
+       /* Set the bit corresponding to the given Data Protection Range */
+       DPWERegisterValue.B.WE_N |= (0x1 << range);
+
+       /* Set the CPU Data Protection Write Enable Register value to enable data write access */
+       switch(protectionSet)
+       {
+           case 0: /* Protection Set 0 */
+               __mtcr(CPU_DPWE_0, DPWERegisterValue.U);
+               break;
+           case 1: /* Protection Set 1 */
+               __mtcr(CPU_DPWE_1, DPWERegisterValue.U);
+               break;
+           case 2: /* Protection Set 2 */
+               __mtcr(CPU_DPWE_2, DPWERegisterValue.U);
+               break;
+           case 3: /* Protection Set 3 */
+               __mtcr(CPU_DPWE_3, DPWERegisterValue.U);
+               break;
+           case 4: /* Protection Set 4 */
+               __mtcr(CPU_DPWE_4, DPWERegisterValue.U);
+               break;
+           case 5: /* Protection Set 5 */
+               __mtcr(CPU_DPWE_5, DPWERegisterValue.U);
+               break;
+       }
+
+}
+

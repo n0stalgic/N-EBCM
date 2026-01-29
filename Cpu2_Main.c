@@ -46,11 +46,11 @@ int core2_main(void)
     IfxCpu_waitEvent(&cpuSyncEvent, 1);
 
     /* Initialize the Shell Interface and the UART communication */
-    initShellInterface();
+
 
     while(1)
     {
-        runShellInterface(); /* Run the application shell */
+   //     runShellInterface(); /* Run the application shell */
     }
     return (1);
 }
