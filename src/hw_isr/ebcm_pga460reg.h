@@ -2757,6 +2757,57 @@ typedef union
         PGA460_THR_CRC_Bits   B;
 } PGA460_THR_CRC;
 
+/** \brief PGA460 EEPROM Memory map */
+__attribute__((packed)) typedef volatile struct _PGA460_EEPROM
+{
+        PGA460_USER_DATA1        USER_DATA1;            /**< 00 User data register    */
+        PGA460_USER_DATA2        USER_DATA2;            /**< 01 User data register    */
+        PGA460_USER_DATA3        USER_DATA3;            /**< 02 User data register    */
+        PGA460_USER_DATA4        USER_DATA4;            /**< 03 User data register    */
+        PGA460_USER_DATA5        USER_DATA5;            /**< 04 User data register    */
+        PGA460_USER_DATA6        USER_DATA6;            /**< 05 User data register    */
+        PGA460_USER_DATA7        USER_DATA7;            /**< 06 User data register    */
+        PGA460_USER_DATA8        USER_DATA8;            /**< 07 User data register    */
+        PGA460_USER_DATA9        USER_DATA9;            /**< 08 User data register    */
+        PGA460_USER_DATA10       USER_DATA10;           /**< 09 User data register    */
+        PGA460_USER_DATA11       USER_DATA11;           /**< 0A User data register    */
+        PGA460_USER_DATA12       USER_DATA12;           /**< 0B User data register    */
+        PGA460_USER_DATA13       USER_DATA13;           /**< 0C User data register    */
+        PGA460_USER_DATA14       USER_DATA14;           /**< 0D User data register    */
+        PGA460_USER_DATA15       USER_DATA15;           /**< 0E User data register    */
+        PGA460_USER_DATA16       USER_DATA16;           /**< 0F User data register    */
+        PGA460_USER_DATA17       USER_DATA17;           /**< 10 User data register    */
+        PGA460_USER_DATA18       USER_DATA18;           /**< 11 User data register    */
+        PGA460_USER_DATA19       USER_DATA19;           /**< 12 User data register    */
+        PGA460_USER_DATA20       USER_DATA20;           /**< 13 User data register    */
+        PGA460_TVGAIN0           TVGAIN0;               /**< 14 Time varying gain map segment config register 0   */
+        PGA460_TVGAIN1           TVGAIN1;               /**< 15 Time varying gain map segment config register 1   */
+        PGA460_TVGAIN2           TVGAIN2;               /**< 16 Time varying gain map segment config register 2   */
+        PGA460_TVGAIN3           TVGAIN3;               /**< 17 Time varying gain map segment config register 3   */
+        PGA460_TVGAIN4           TVGAIN4;               /**< 18 Time varying gain map segment config register 4   */
+        PGA460_TVGAIN5           TVGAIN5;               /**< 19 Time varying gain map segment config register 5   */
+        PGA460_TVGAIN6           TVGAIN6;               /**< 1A Time varying gain map segment config register 6   */
+        PGA460_INIT_GAIN         INIT_GAIN;             /**< 1B AFE initial gain configuration register           */
+        PGA460_FREQUENCY         FREQUENCY;             /**< 1C Burst frequency configuration register            */
+        PGA460_DEADTIME          DEADTIME;              /**< 1D Deadtime and threshold deglitch configuration     */
+        PGA460_PULSE_P1          PULSE_P1;              /**< 1E Preset1 Pulse burst, IO ctl, UART diagnostic configuration     */
+        PGA460_PULSE_P2          PULSE_P2;              /**< 1F Preset2 Pulse burst, IO ctl, UART diagnostic configuration     */
+        PGA460_CURR_LIM_P1       CURR_LIM_P1;           /**< 20 Preset1 driver current limit configuration  */
+        PGA460_CURR_LIM_P2       CURR_LIM_P2;           /**< 21 Preset2 driver current limit configuration  */
+        PGA460_REC_LENGTH        REC_LENGTH;            /**< 22 Echo data record period configuration   */
+        PGA460_FREQ_DIAG         FREQ_DIAG;             /**< 23 Frequency diagnostic configuration register    */
+        PGA460_SAT_FDIAG_TH      SAT_FDIAG_TH;          /**< 24 Decay saturation, frequency diag error and P1 non-linear control config */
+        PGA460_FVOLT_DEC         FVOLT_DEC;             /**< 25 Voltage thresholds and P2 non-linear scaling config register    */
+        PGA460_DECPL_TEMP        DECPL_TEMP;            /**< 26 Decouple temp and AFE gain range configuration   */
+        PGA460_DSP_SCALE         DSP_SCALE;             /**< 27 DSP path non-linear scaling and noise level configuration    */
+        PGA460_TEMP_TRIM         TEMP_TRIM;             /**< 28 Temperature compensation values    */
+        PGA460_P1_GAIN_CTRL      P1_GAIN_CTRL;          /**< 29 P1 digital gain configuration register */
+        PGA460_P2_GAIN_CTRL      P2_GAIN_CTRL;          /**< 2A P2 digital gain configuration register */
+        PGA460_EE_CRC            EE_CRC;                /**< 2B User EEPROM space CRC value    */
+} PGA460_EEPROM;
+
+
+/** \brief PGA460 Register Map */
 __attribute__((packed)) typedef volatile struct _PGA460_Reg_
 {
         PGA460_USER_DATA1        USER_DATA1;            /**< 00 User data register    */
