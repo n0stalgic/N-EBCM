@@ -63,12 +63,20 @@
 #define ISR_PRORITY_SMU_ISR_0                    5
 #define ISR_PRORITY_SMU_ISR_1                    6
 #define ISR_PRORITY_SMU_ISR_2                    7
-#define ISR_PRIORITY_GPT12_TIMER                 8
-#define ISR_PRIORITY_OS_TICK                     9       /* Define the tick for the Application */
+#define ISR_PRIORITY_GPT12_TIMER                 3
+#define ISR_PRIORITY_OS_TICK                     4       /* Define the tick for the Application */
+#define ISR_PRIORITY_DMA_CH2                     5       /* DMA ISR priority for final transaction in linked list */
 #define ISR_PRIORITY_FCE_ER                      13      /* Flexible CRC Engine */
 #define ISR_PRIORITY_DTS                         14      /* Die Temperature Sensor */
+#define ISR_PRIORITY_ASCLIN1_RX                  15      /* Ultrasonic sensor RX Prio */
+#define ISR_PRIORITY_ASCLIN1_TX                  16      /* Ultrasonic sensor TX Prio */
+#define ISR_PRIORITY_DMA                         17      /* DMA for PGA460 UART Prio */
+#define ISR_PRIORITY_ASCLIN0_TX                  19      /* Priority of the UART0 VCOM TX ISR                  */
 
 
+
+#define __UNLOCK_CPU_SAFETY_WD() IfxScuWdt_clearCpuEndinit(IfxScuWdt_getCpuWatchdogPassword())
+#define __LOCK_CPU_SAFETY_WD()   IfxScuWdt_setCpuEndinit(IfxScuWdt_getCpuWatchdogPassword())
 
 /*********************************************************************************************************************/
 /*-------------------------------------------------Global variables--------------------------------------------------*/

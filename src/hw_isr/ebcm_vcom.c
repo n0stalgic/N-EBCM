@@ -33,6 +33,7 @@
 #include "IfxCpu_Irq.h"
 #include <stdio.h>
 #include <stdarg.h>
+#include "ebcm_cfg.h"
 
 /*********************************************************************************************************************/
 /*------------------------------------------------------Macros-------------------------------------------------------*/
@@ -76,7 +77,7 @@ void init_UART(void)
     ascConfig.baudrate.baudrate = SERIAL_BAUDRATE;
 
     /* ISR priorities and interrupt target */
-    ascConfig.interrupt.txPriority = ISR_PRIORITY_ASCLIN0_TX;
+    ascConfig.interrupt.txPriority = (uint8) ISR_PRIORITY_ASCLIN0_TX;
     ascConfig.interrupt.typeOfService = IfxCpu_Irq_getTos(IfxCpu_getCoreIndex());
 
     /* FIFO configuration */

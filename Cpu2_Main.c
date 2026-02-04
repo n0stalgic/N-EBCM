@@ -27,7 +27,9 @@
 #include "Ifx_Types.h"
 #include "IfxCpu.h"
 #include "IfxScuWdt.h"
-#include "shell.h"
+#include "ebcm_pga460.h"
+#include "ebcm_vcom.h"
+#include "ebcm_led.h"
 
 extern IfxCpu_syncEvent cpuSyncEvent;
 
@@ -45,12 +47,22 @@ int core2_main(void)
     IfxCpu_emitEvent(&cpuSyncEvent);
     IfxCpu_waitEvent(&cpuSyncEvent, 1);
 
-    /* Initialize the Shell Interface and the UART communication */
+    PGA460_InitInterface();
 
+    PGA460_RegisterWrite(0x1B, 0xBB);
+    PGA460_RegisterRead(0x1B);
 
     while(1)
     {
-   //     runShellInterface(); /* Run the application shell */
+        if (PGA460_isDataReady())
+        {
+            IfxPort_setPinState(&MODULE_P00, EBCM_LED2, IfxPort_State_low);
+        }
+        else
+        {
+            IfxPort_setPinState(&MODULE_P00, EBCM_LED2, IfxPort_State_high);
+
+        }
     }
     return (1);
 }

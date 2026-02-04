@@ -33,6 +33,7 @@
  * \keywords
  * \lastUpdated 2026-01-10
  *********************************************************************************************************************/
+#include <ebcm_vcom.h>
 #include <ssw_lbist.h>
 #include <ssw.h>
 #include "Ifx_Types.h"
@@ -44,7 +45,6 @@
 #include "ebcm_main.h"
 #include "ebcm_sched.h"
 #include "vfw_registry.h"
-#include "vcom.h"
 
 EbcmStmCfg cpuStm0;
 EbcmSysInfo ebcmInfo;
@@ -86,19 +86,18 @@ void core0_main(void)
     uint8 monbist_status    = PMS_MONBISTSTAT.B.TSTOK;
 
 
-    vcom_Print(ENDLINE);
-    vcom_Print("Anti-Lock Braking System FW Ver V0R0A     "ENDLINE);
-    vcom_Print("Debug shell executing from Core: %u"ENDLINE, __mfcr(CPU_CORE_ID));
-    vcom_Print("\r\nCORE0 Lockstep         [%s]"ENDLINE, core0_lockstep_en ? "ENABLED" : "DISABLED");
-    vcom_Print("CORE1 Lockstep         [%s]"ENDLINE, core1_lockstep_en ? "ENABLED" : "DISABLED");
-    vcom_Print("LBIST                  [%s]"ENDLINE, str);
-    vcom_Print("MONBIST                [%s]"ENDLINE, monbist_status ? "PASSED" : "FAILED");
-    vcom_Print("MCU_FW                 [%s]"ENDLINE, ebcmStatus.sswStatus.mcuFwChkStatus == PASSED ? "PASSED" : "FAILED");
-    vcom_Print("MCU_STARTUP            [%s]"ENDLINE, ebcmStatus.sswStatus.mcuStartupStatus ? "OK" : "NOK");
-    vcom_Print("SMU_ALIVE_ALARM        [%s]"ENDLINE, ebcmStatus.sswStatus.aliveAlarmStatus ? "OK" : "NOK");
-    vcom_Print("SMU_REGISTER_MONITOR   [%s]"ENDLINE, ebcmStatus.smuStatus.regMonitorTestSmu ? "PASSED" : "FAILED");
-    vcom_Print("SRAM_BIST              [%s]\r\n"ENDLINE, ebcmStatus.sswStatus.mbistStatus  ? "PASSED" : "FAILED");
-    vcom_Print("Safe SW boot procedure completed.\r\n"ENDLINE);
+    DPRINTF(ENDLINE);
+    DPRINTF("Compiler: %s, ver:%u.%u\n", COMPILER_NAME, COMPILER_VERSION, COMPILER_REVISION );
+    DPRINTF("\r\nCORE0 Lockstep         [%s]"ENDLINE, core0_lockstep_en ? "ENABLED" : "DISABLED");
+    DPRINTF("CORE1 Lockstep         [%s]"ENDLINE, core1_lockstep_en ? "ENABLED" : "DISABLED");
+    DPRINTF("LBIST                  [%s]"ENDLINE, str);
+    DPRINTF("MONBIST                [%s]"ENDLINE, monbist_status ? "PASSED" : "FAILED");
+    DPRINTF("MCU_FW                 [%s]"ENDLINE, ebcmStatus.sswStatus.mcuFwChkStatus == PASSED ? "PASSED" : "FAILED");
+    DPRINTF("MCU_STARTUP            [%s]"ENDLINE, ebcmStatus.sswStatus.mcuStartupStatus ? "OK" : "NOK");
+    DPRINTF("SMU_ALIVE_ALARM        [%s]"ENDLINE, ebcmStatus.sswStatus.aliveAlarmStatus ? "OK" : "NOK");
+    DPRINTF("SMU_REGISTER_MONITOR   [%s]"ENDLINE, ebcmStatus.smuStatus.regMonitorTestSmu ? "PASSED" : "FAILED");
+    DPRINTF("SRAM_BIST              [%s]\r\n"ENDLINE, ebcmStatus.sswStatus.mbistStatus  ? "PASSED" : "FAILED");
+    DPRINTF("Safe SW boot procedure completed.\r\n"ENDLINE);
 
     /* Wait for CPU sync event */
 

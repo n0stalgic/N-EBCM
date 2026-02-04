@@ -7,6 +7,7 @@
  * Copyright (c) 2026 n0stalgic
  *****************************************************************************/
 
+#include <ebcm_vcom.h>
 #include "vfw_checkpoint.h"
 #include "IfxCpu.h"
 #include "IfxScuWdt.h"
@@ -18,7 +19,6 @@
 #include "IfxPort.h"
 #include "string.h"
 #include "stdio.h"
-#include "vcom.h"
 
 /*********************************************************************************************************************/
 /*-------------------------------------------------Global variables--------------------------------------------------*/
@@ -26,16 +26,16 @@
 IfxAsclin_Asc g_asc;
 
 /* Integrity Accumulator */
-volatile uint32 VFW_integrity_accumulator __attribute__ ((aligned(DPR_GRANULARITY))) = 0U;
-volatile boolean VFW_integrityCheckFailed __attribute__ ((aligned(DPR_GRANULARITY))) = FALSE;
+volatile uint32 VFW_integrity_accumulator __attribute__ ((__align(DPR_GRANULARITY))) = 0U;
+volatile boolean VFW_integrityCheckFailed __attribute__ ((__align(DPR_GRANULARITY))) = FALSE;
 
 /*********************************************************************************************************************/
 /*--------------------------------------------Private Variables/Constants--------------------------------------------*/
 /*********************************************************************************************************************/
 
 /* Vital Framework checkpoint and profiling database 8-byte aligned for MPU protection */
-static VfwCheckpoint* vfwRegistry[VFW_MAX_CHECKPOINTS] __attribute__ ((aligned(DPR_GRANULARITY)));
-static uint16 vfwRegistryCount __attribute__ ((aligned(DPR_GRANULARITY))) = 0U;
+static VfwCheckpoint* vfwRegistry[VFW_MAX_CHECKPOINTS] __attribute__ ((__align(DPR_GRANULARITY)));
+static uint16 vfwRegistryCount __attribute__ ((__align(DPR_GRANULARITY))) = 0U;
 
 
 /*********************************************************************************************************************/
@@ -58,7 +58,7 @@ static void VFW_ProtectionInit(void)
     /* Set 2 : Vital framework safe region (DPR 15 restricted) */
     VFW_defineDataProtectionRange((uint32) __VFW_SAFE0, (uint32) __VFW_SAFE0_END , DATA_PROTECTION_RANGE_15);
 
-    DPRINTF("VFW SAFE MPU Range: 0x%x - 0x%x\r\n", (uint32)__VFW_SAFE0, (uint32) __VFW_SAFE0_END );
+    DPRINTF("Vital Framework Safe Mem Region: 0x%x - 0x%x\r\n", (uint32)__VFW_SAFE0, (uint32) __VFW_SAFE0_END );
 
     /* PRS 1: Read only - Allow application to read vital framework data */
     VFW_enableDataRead(PROTECTION_SET_1, DATA_PROTECTION_RANGE_15);
@@ -199,7 +199,7 @@ boolean VFW_HasIntegrityCheckFailed(void)
 #pragma optimize 0
 boolean VFW_IntegrityCheck(void)
 {
-    /* Switch to special memory access for VFW updates */
+    /* Switch to special memory access for Vital Framework updates */
     set_active_protection_set(PROTECTION_SET_0);
 
     if (VFW_integrity_accumulator != 0U)
@@ -209,13 +209,12 @@ boolean VFW_IntegrityCheck(void)
         IfxScuWdt_disableCpuWatchdog(IfxScuWdt_getCpuWatchdogPassword());
         VFW_integrityCheckFailed = TRUE;
 
-        /* Debug: Look at VFW_integrity_accumulator to see which function is stuck */
         return FALSE;
     }
 
     VFW_integrityCheckFailed = FALSE;
 
-    /* Drop back to background access */
+    /* Drop back to non-safe access */
     set_active_protection_set(PROTECTION_SET_1);
 
     return TRUE;
