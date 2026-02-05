@@ -56,8 +56,11 @@
 /*********************************************************************************************************************/
 void     PGA460_InitDMA(void);
 
-boolean  PGA460_isDataReady();
+boolean  PGA460_isAvailable(void);
+boolean  PGA460_isDataReady(void);
+void     PGA460_ProcessFrame(void);
 void     PGA460_InitInterface(void);
+void     PGA460_EEPROMRead(void);
 void     PGA460_RegisterRead(uint8 reg_addr);
 void     PGA460_RegisterWrite(uint8 reg_addr, uint8 data);
 void     PGA460_InitThresholds(void);

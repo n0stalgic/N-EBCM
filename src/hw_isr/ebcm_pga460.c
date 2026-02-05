@@ -40,6 +40,7 @@
 #include "IfxCpu.h"
 #include "string.h"
 
+
 /*********************************************************************************************************************/
 /*------------------------------------------------------Macros-------------------------------------------------------*/
 /*********************************************************************************************************************/
@@ -76,6 +77,7 @@
 #define COMMAND_ADDR_MASK       0x7
 
 #define COMMAND_METADATA_BYTE_COUNT         0x3
+#define RESP_METADATA_BYTE_COUNT            0x2
 
 #define CMD_BL_P1_DATA_LEN                  0x1
 #define CMD_BL_P2_DATA_LEN                  0x1
@@ -110,30 +112,6 @@
 
 /*********************************************************************************************************************/
 /*-------------------------------------------------Global variables--------------------------------------------------*/
-/*********************************************************************************************************************/
-
-IfxAsclin_Asc asc_1;
-
-uint8 pga460TxBuffer[ASC_TX_BUFFER_SIZE];
-uint8 pga460RxBuffer[ASC_RX_BUFFER_SIZE];
-
-volatile boolean resp_recvd = FALSE;
-volatile uint8  tx_bytes = 0;
-
-IfxDma_Dma dma;
-
-/* Allocate TCS blocks 32-byte aligned */
-
-/* TX TCS block */
-IFX_ALIGN(256) static uint32 __tcs0[6];
-
-/* RX TCS block */
-IFX_ALIGN(256) static uint32 __tcs1[6];
-
-
-
-/*********************************************************************************************************************/
-/*--------------------------------------------Private Variables/Constants--------------------------------------------*/
 /*********************************************************************************************************************/
 
 typedef enum _PGA460_CMD_TYPE
@@ -174,6 +152,40 @@ typedef enum _PGA460_CMD_TYPE
 
 } PGA460_CMD_TYPE;
 
+typedef enum _PGA460_cmd_st
+{
+    ST_IDLE,
+    ST_CMD_IN_FLIGHT,
+    ST_CMD_FINISHED
+} PGA460_comm_st;
+
+IfxAsclin_Asc asc_1;
+
+uint8 pga460TxBuffer[ASC_TX_BUFFER_SIZE];
+uint8 pga460RxBuffer[ASC_RX_BUFFER_SIZE];
+
+volatile boolean resp_recvd = FALSE;
+volatile uint8  tx_bytes = 0;
+volatile PGA460_comm_st pga460CommState;
+
+IfxDma_Dma dma;
+
+/* Allocate TCS blocks 32-byte aligned */
+
+/* TX TCS block */
+IFX_ALIGN(256) static uint32 __tcs0[6];
+
+/* RX TCS block */
+IFX_ALIGN(256) static uint32 __tcs1[6];
+
+
+
+/*********************************************************************************************************************/
+/*--------------------------------------------Private Variables/Constants--------------------------------------------*/
+/*********************************************************************************************************************/
+
+
+
 /*********************************************************************************************************************/
 /*------------------------------------------------Function Prototypes------------------------------------------------*/
 /*********************************************************************************************************************/
@@ -193,8 +205,10 @@ void DMA_TX_ISR(void)
 IFX_INTERRUPT(DMA_RX_ISR, CPU2_VECT_TABLE_ID, DMA_RX_CHANNEL);
 void DMA_RX_ISR(void)
 {
-    tx_bytes = 0;
-    resp_recvd = TRUE;
+    if (DMA_CHCSR015.B.TCOUNT == 0)
+    {
+        pga460CommState = ST_CMD_FINISHED;
+    }
 }
 
 static uint8 calcChecksum(const uint8* frame, size_t data_len)
@@ -233,6 +247,7 @@ void PGA460_InitInterface(void)
 
     /* 115200 8N2 */
     ascConfig.baudrate.baudrate = UART_BAUDRATE;
+    ascConfig.baudrate.oversampling = IfxAsclin_OversamplingFactor_16;
     ascConfig.frame.stopBit = IfxAsclin_StopBit_2;
     ascConfig.frame.dataLength = IfxAsclin_DataLength_8;
     ascConfig.frame.parityBit = FALSE;
@@ -284,15 +299,15 @@ static void dma_init_tcs(void)
     __tcs0[2] = (uint32) pga460TxBuffer; /* SADR */
     __tcs0[3] = (uint32) &asc_1.asclin->TXDATA.U; /* DADR */
     __tcs0[4] = 0x0C200088;      /* ADICR: SMF = 0x2, INCD=0x1, DCBE=0x1, INCS=0x1 */
-    __tcs0[5] = 0x00080001;      /* CHCFGR: TREL=0x1, RROAT=0x1 PRSEL=0x0 (HW req)  */
+    __tcs0[5] = 0x00080001;      /* CHCFGR: TREL=0x1, RROAT=0x0 PRSEL=0x0 (HW req)  */
 
 
     __tcs1[0] = 0x00; /* RDCRC */
     __tcs1[1] = 0x00; /* SDCRC */
     __tcs1[2] = (uint32) &asc_1.asclin->RXDATA.U;; /* SADR */
     __tcs1[3] = (uint32) pga460RxBuffer;           /* DADR */
-    __tcs1[4] = 0x0C100088;      /* ADICR: DMF = 0x2, INCD=0x1, INCS=0x1, SCBE=0x1 */
-    __tcs1[5] = 0x00000005;      /* CHCFGR: TREL=0x2, RROAT=0x1 PRSEL=0x1 (daisy chain req) */
+    __tcs1[4] = 0xC100088;       /* ADICR: DMF = 0x0, INCD=0x1, INCS=0x1, SCBE=0x1 */
+    __tcs1[5] = 0x00000005;      /* CHCFGR: TREL=0x5 (init value), RROAT=0x0 PRSEL=0x0  */
 
     SRC_DMACH16.U       = 0x00001C10; /* SRC_DMACH16: SRPN=0x10 (ISR Prio #), SRE=0x1, TOS=0x3 (CPU2) */
     SRC_DMACH15.U       = 0x00001C0F; /* SRC_DMACH16: SRPN=0x0F (ISR Prio #), SRE=0x1, TOS=0x3 (CPU2) */
@@ -321,6 +336,7 @@ static void asclin_start_tx(void)
 {
     /* Initiate the transmission by using the transmit FIFO level flag */
     ASCLIN1_FLAGSSET.B.TFLS = 1;
+    pga460CommState = ST_CMD_IN_FLIGHT;
 }
 
 static void dma_load_resp_tcs(size_t resp_len)
@@ -387,16 +403,14 @@ static inline size_t pack_RegisterWriteFrame(uint8* buffer, uint8 pga_addr, uint
     return -1;
 }
 
-static inline size_t pack_EEPROMBulkReadFrame(uint8* buffer, uint8 pga_addr, uint8 reg_addr)
+static inline size_t pack_EEPROMBulkReadFrame(uint8* buffer, uint8 pga_addr)
 {
     if (buffer != NULL_PTR)
     {
         buffer[0] = PGA460_SYNC_BYTE;
         buffer[1] = PACK_COMMAND_BYTE(PGA460_COMMAND_EEPROM_BULK_READ, pga_addr);
-        buffer[2] = reg_addr;
-        buffer[3] = calcChecksum(buffer, 1); // cmd byte only
 
-        return 4;
+        return 2;
     }
 
     return -1;
@@ -413,18 +427,37 @@ static inline size_t unpack_EEPROMBulkReadData(uint8* buffer)
 
 #endif
 
+void PGA460_ProcessFrame(void)
+{
+    // do some processing here, like setting internal shadow registers. do nothing for now
+    if (pga460CommState == ST_CMD_FINISHED)
+    {
+        pga460CommState = ST_IDLE;
+    }
+}
+
+boolean PGA460_isAvailable(void)
+{
+    return (pga460CommState == ST_IDLE);
+}
+
 boolean PGA460_isDataReady(void)
 {
-    return resp_recvd;
+    return (pga460CommState == ST_CMD_FINISHED);
 }
 
 void    PGA460_RegisterRead(uint8 reg_addr)
 {
 
+    if (DMA_TSR016.B.CH || DMA_TSR015.B.CH)
+    {
+        return;
+    }
+
     /* +-- sync--+--command--+ data--+--CRC */
     uint8 buf[4] = {0};
     const Ifx_SizeT msgLen = 4;
-    const Ifx_SizeT respLen = 2 + RESP_REGISTER_READ_DATA_LEN; /* diag data + data len + chksum */
+    const Ifx_SizeT respLen = RESP_METADATA_BYTE_COUNT + RESP_REGISTER_READ_DATA_LEN; /* diag data + data len + chksum */
     pack_RegisterReadFrame(buf, PGA460_ADDR, reg_addr);
 
     memmove(pga460TxBuffer, buf, msgLen);
@@ -442,7 +475,12 @@ void    PGA460_RegisterRead(uint8 reg_addr)
 void    PGA460_RegisterWrite(uint8 reg_addr, uint8 data)
 {
 
-    /* +-- sync--+--command--+ data(2)--+--CRC */
+    if (DMA_TSR016.B.CH || DMA_TSR015.B.CH)
+    {
+        return;
+    }
+
+    /* +-- sync--+--command--+--data(2)--+--CRC */
     uint8 buf[5] = {0};
     Ifx_SizeT msgLen = 5;
     pack_RegisterWriteFrame(buf, PGA460_ADDR, reg_addr, data);
@@ -455,6 +493,29 @@ void    PGA460_RegisterWrite(uint8 reg_addr, uint8 data)
     asclin_start_tx();
 }
 
+
+void    PGA460_EEPROMRead(void)
+{
+
+    /* extra protection, give up if DMA is busy */
+    if (DMA_TSR016.B.CH || DMA_TSR015.B.CH)
+    {
+        return;
+    }
+
+    /* +-- sync--+--command--+ data(0)--+--CRC */
+    uint8 buf[2] = {0};
+    const Ifx_SizeT msgLen = 2;
+    const Ifx_SizeT respLen = RESP_EEPROM_BULK_READ_DATA_LEN + RESP_METADATA_BYTE_COUNT; /* CRC + diag data */
+    pack_EEPROMBulkReadFrame(buf, PGA460_ADDR);
+
+    memmove(pga460TxBuffer, buf, msgLen);
+
+    dma_load_cmd_tcs(msgLen);
+    dma_load_resp_tcs(respLen);
+
+    asclin_start_tx();
+}
 
 
 void     PGA460_initThresholds(void)

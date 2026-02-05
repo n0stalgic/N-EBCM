@@ -36,6 +36,130 @@
 /*------------------------------------------------------Macros-------------------------------------------------------*/
 /*********************************************************************************************************************/
 
+/**
+ * @brief PGA460 Register Address Offsets
+ * 
+ * These offset macros allow portable register access without relying on packed structs.
+ * Use with base address pointer or SPI read/write functions.
+ * 
+ * Example: reg_value = base_ptr[PGA460_REG_FREQUENCY_OFFSET];
+ */
+
+/* User Data Registers (0x00 - 0x13) */
+#define PGA460_REG_USER_DATA1_OFFSET        0x00u
+#define PGA460_REG_USER_DATA2_OFFSET        0x01u
+#define PGA460_REG_USER_DATA3_OFFSET        0x02u
+#define PGA460_REG_USER_DATA4_OFFSET        0x03u
+#define PGA460_REG_USER_DATA5_OFFSET        0x04u
+#define PGA460_REG_USER_DATA6_OFFSET        0x05u
+#define PGA460_REG_USER_DATA7_OFFSET        0x06u
+#define PGA460_REG_USER_DATA8_OFFSET        0x07u
+#define PGA460_REG_USER_DATA9_OFFSET        0x08u
+#define PGA460_REG_USER_DATA10_OFFSET       0x09u
+#define PGA460_REG_USER_DATA11_OFFSET       0x0Au
+#define PGA460_REG_USER_DATA12_OFFSET       0x0Bu
+#define PGA460_REG_USER_DATA13_OFFSET       0x0Cu
+#define PGA460_REG_USER_DATA14_OFFSET       0x0Du
+#define PGA460_REG_USER_DATA15_OFFSET       0x0Eu
+#define PGA460_REG_USER_DATA16_OFFSET       0x0Fu
+#define PGA460_REG_USER_DATA17_OFFSET       0x10u
+#define PGA460_REG_USER_DATA18_OFFSET       0x11u
+#define PGA460_REG_USER_DATA19_OFFSET       0x12u
+#define PGA460_REG_USER_DATA20_OFFSET       0x13u
+
+/* Time Varying Gain Registers (0x14 - 0x1A) */
+#define PGA460_REG_TVGAIN0_OFFSET           0x14u
+#define PGA460_REG_TVGAIN1_OFFSET           0x15u
+#define PGA460_REG_TVGAIN2_OFFSET           0x16u
+#define PGA460_REG_TVGAIN3_OFFSET           0x17u
+#define PGA460_REG_TVGAIN4_OFFSET           0x18u
+#define PGA460_REG_TVGAIN5_OFFSET           0x19u
+#define PGA460_REG_TVGAIN6_OFFSET           0x1Au
+
+/* AFE and Burst Configuration Registers (0x1B - 0x1F) */
+#define PGA460_REG_INIT_GAIN_OFFSET         0x1Bu
+#define PGA460_REG_FREQUENCY_OFFSET         0x1Cu
+#define PGA460_REG_DEADTIME_OFFSET          0x1Du
+#define PGA460_REG_PULSE_P1_OFFSET          0x1Eu
+#define PGA460_REG_PULSE_P2_OFFSET          0x1Fu
+
+/* Current Limit and Record Configuration Registers (0x20 - 0x22) */
+#define PGA460_REG_CURR_LIM_P1_OFFSET       0x20u
+#define PGA460_REG_CURR_LIM_P2_OFFSET       0x21u
+#define PGA460_REG_REC_LENGTH_OFFSET        0x22u
+
+/* Diagnostic and Control Registers (0x23 - 0x2A) */
+#define PGA460_REG_FREQ_DIAG_OFFSET         0x23u
+#define PGA460_REG_SAT_FDIAG_TH_OFFSET      0x24u
+#define PGA460_REG_FVOLT_DEC_OFFSET         0x25u
+#define PGA460_REG_DECPL_TEMP_OFFSET        0x26u
+#define PGA460_REG_DSP_SCALE_OFFSET         0x27u
+#define PGA460_REG_TEMP_TRIM_OFFSET         0x28u
+#define PGA460_REG_P1_GAIN_CTRL_OFFSET      0x29u
+#define PGA460_REG_P2_GAIN_CTRL_OFFSET      0x2Au
+#define PGA460_REG_EE_CRC_OFFSET            0x2Bu
+
+/* EEPROM Control Register (0x40) */
+#define PGA460_REG_EE_CNTRL_OFFSET          0x40u
+
+/* Bandpass Filter Coefficient Registers (0x41 - 0x46) */
+#define PGA460_REG_BPF_A2_MSB_OFFSET        0x41u
+#define PGA460_REG_BPF_A2_LSB_OFFSET        0x42u
+#define PGA460_REG_BPF_A3_MSB_OFFSET        0x43u
+#define PGA460_REG_BPF_A3_LSB_OFFSET        0x44u
+#define PGA460_REG_BPF_B1_MSB_OFFSET        0x45u
+#define PGA460_REG_BPF_B1_LSB_OFFSET        0x46u
+
+/* Lowpass Filter Coefficient Registers (0x47 - 0x4A) */
+#define PGA460_REG_LPF_A2_MSB_OFFSET        0x47u
+#define PGA460_REG_LPF_A2_LSB_OFFSET        0x48u
+#define PGA460_REG_LPF_B1_MSB_OFFSET        0x49u
+#define PGA460_REG_LPF_B1_LSB_OFFSET        0x4Au
+
+/* Test and Status Registers (0x4B - 0x4D) */
+#define PGA460_REG_TEST_MUX_OFFSET          0x4Bu
+#define PGA460_REG_DEV_STAT0_OFFSET         0x4Cu
+#define PGA460_REG_DEV_STAT1_OFFSET         0x4Du
+
+/* Preset1 Threshold Map Registers (0x5F - 0x6E) */
+#define PGA460_REG_P1_THR_0_OFFSET          0x5Fu
+#define PGA460_REG_P1_THR_1_OFFSET          0x60u
+#define PGA460_REG_P1_THR_2_OFFSET          0x61u
+#define PGA460_REG_P1_THR_3_OFFSET          0x62u
+#define PGA460_REG_P1_THR_4_OFFSET          0x63u
+#define PGA460_REG_P1_THR_5_OFFSET          0x64u
+#define PGA460_REG_P1_THR_6_OFFSET          0x65u
+#define PGA460_REG_P1_THR_7_OFFSET          0x66u
+#define PGA460_REG_P1_THR_8_OFFSET          0x67u
+#define PGA460_REG_P1_THR_9_OFFSET          0x68u
+#define PGA460_REG_P1_THR_10_OFFSET         0x69u
+#define PGA460_REG_P1_THR_11_OFFSET         0x6Au
+#define PGA460_REG_P1_THR_12_OFFSET         0x6Bu
+#define PGA460_REG_P1_THR_13_OFFSET         0x6Cu
+#define PGA460_REG_P1_THR_14_OFFSET         0x6Du
+#define PGA460_REG_P1_THR_15_OFFSET         0x6Eu
+
+/* Preset2 Threshold Map Registers (0x6F - 0x7E) */
+#define PGA460_REG_P2_THR_0_OFFSET          0x6Fu
+#define PGA460_REG_P2_THR_1_OFFSET          0x70u
+#define PGA460_REG_P2_THR_2_OFFSET          0x71u
+#define PGA460_REG_P2_THR_3_OFFSET          0x72u
+#define PGA460_REG_P2_THR_4_OFFSET          0x73u
+#define PGA460_REG_P2_THR_5_OFFSET          0x74u
+#define PGA460_REG_P2_THR_6_OFFSET          0x75u
+#define PGA460_REG_P2_THR_7_OFFSET          0x76u
+#define PGA460_REG_P2_THR_8_OFFSET          0x77u
+#define PGA460_REG_P2_THR_9_OFFSET          0x78u
+#define PGA460_REG_P2_THR_10_OFFSET         0x79u
+#define PGA460_REG_P2_THR_11_OFFSET         0x7Au
+#define PGA460_REG_P2_THR_12_OFFSET         0x7Bu
+#define PGA460_REG_P2_THR_13_OFFSET         0x7Cu
+#define PGA460_REG_P2_THR_14_OFFSET         0x7Du
+#define PGA460_REG_P2_THR_15_OFFSET         0x7Eu
+
+/* Threshold CRC Register (0x7F) */
+#define PGA460_REG_THR_CRC_OFFSET           0x7Fu
+
 /*********************************************************************************************************************/
 /*-------------------------------------------------Global variables--------------------------------------------------*/
 /*********************************************************************************************************************/

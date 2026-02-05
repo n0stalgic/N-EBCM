@@ -30,9 +30,13 @@
 #include "ebcm_pga460.h"
 #include "ebcm_vcom.h"
 #include "ebcm_led.h"
+#include "ebcm_main.h"
+#include "IfxPort.h"
+#include "ebcm_cfg.h"
+#include "IfxStm.h"
+
 
 extern IfxCpu_syncEvent cpuSyncEvent;
-
 
 int core2_main(void)
 {
@@ -49,13 +53,30 @@ int core2_main(void)
 
     PGA460_InitInterface();
 
+    uint64 start = IfxStm_get(&MODULE_STM2);
     PGA460_RegisterWrite(0x1B, 0xBB);
+    while (IfxStm_get(&MODULE_STM2) - start < (5 * IFX_CFG_STM_TICKS_PER_MS));
+    start = IfxStm_get(&MODULE_STM2);
     PGA460_RegisterRead(0x1B);
+    while (!PGA460_isDataReady());
+    PGA460_ProcessFrame();
+    PGA460_RegisterRead(0x1C);
+    while (!PGA460_isDataReady());
+    PGA460_ProcessFrame();
+
+    PGA460_EEPROMRead();
+    while (!PGA460_isDataReady());
+    PGA460_ProcessFrame();
+
 
     while(1)
     {
-        if (PGA460_isDataReady())
+
+        if (PGA460_isAvailable())
         {
+            PGA460_RegisterRead(0x1C);
+            while (!PGA460_isDataReady());
+            PGA460_ProcessFrame();
             IfxPort_setPinState(&MODULE_P00, EBCM_LED2, IfxPort_State_low);
         }
         else
