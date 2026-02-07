@@ -195,9 +195,9 @@ void EbcmSch_Gpt12_core0DeadlineTripwireIsr(void)
 {
 
     /* Just toggle an LED for now. We'll set safe electrical outputs here eventually */
-    IfxPort_setPinState(&MODULE_P00, EBCM_LED2, IfxPort_State_toggled);
-
-
+    IfxCpu_disableInterrupts();
+    IfxScuWdt_disableCpuWatchdog(IfxScuWdt_getCpuWatchdogPassword());
+    IfxPort_setPinState(&MODULE_P00, EBCM_LED2, IfxPort_State_low);
 
 }
 
@@ -207,7 +207,11 @@ void EbcmSch_Gpt12_core1DeadlineTripwireIsr(void)
     /* do nothing for now on core 1. for now, may add a special LED pattern to indicate
      * WCET violation. for the final system, trigger safe outputs
      */
-    ;
+
+    IfxCpu_disableInterrupts();
+    IfxScuWdt_disableCpuWatchdog(IfxScuWdt_getCpuWatchdogPassword());
+    IfxPort_setPinState(&MODULE_P00, EBCM_LED2, IfxPort_State_low);
+
 
 }
 
@@ -276,38 +280,24 @@ void EbcmSch_runTasks(IfxCpu_ResourceCpu cpuId)
                 }
             }
         }
+
+        /* in a less stringent scheduler setup, you could make the flag(s) an actual counter, run tasks and decrement it
+         * until it hits zero to allow the scheduler to run until its caught up on overruns. however,
+         * if the scheduler has overrun that badly, we consider ourselves in a non-safe state. if a task overruns,
+         * put the whole system into a safe-state, no chance for scheduler recovery.
+         */
+
+        __disable();
+        if (cpu0execTaskCounter > 0 && cpuId == IfxCpu_ResourceCpu_0)
+        {
+            cpu0execTaskCounter--;
+        }
+
+        if (cpu1execTaskCounter > 0 && cpuId == IfxCpu_ResourceCpu_1)
+        {
+            cpu1execTaskCounter--;
+        }
     }
-
-
-
-
-    /* in a less stringent scheduler setup, you could make the flag(s) an actual counter, run tasks and decrement it
-     * until it hits zero to allow the scheduler to run until its caught up on overruns. however,
-     * if the scheduler has overrun that badly, we consider ourselves in a non-safe state. if a task overruns,
-     * put the whole system into a safe-state, no chance for scheduler recovery.
-     */
-
-    __disable();
-    if (cpu0execTaskCounter > 0 && cpuId == IfxCpu_ResourceCpu_0)
-    {
-        cpu0execTaskCounter--;
-    }
-
-    if (cpu1execTaskCounter > 0 && cpuId == IfxCpu_ResourceCpu_1)
-    {
-        cpu1execTaskCounter--;
-    }
-
-    /* don't allow scheduler and other interrupts to continue if we don't have program execution
-     * integrity. in the future this will apply a safe state and ideally we'll be taken to an NMI for further
-     * handling
-     */
-    if (!VFW_HasIntegrityCheckFailed())
-    {
-        __enable();
-
-    }
-
 }
 
 #pragma endoptimize
