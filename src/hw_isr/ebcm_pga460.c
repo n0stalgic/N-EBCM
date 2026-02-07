@@ -107,6 +107,20 @@
 #define RESP_TVG_BULK_READ_DATA_LEN         0x7
 #define RESP_THR_BULK_READ_DATA_LEN         0x20
 
+#define THRESHOLD_P1_L1_L2_INIT_VALUE       152U
+#define THRESHOLD_P1_L3_INIT_VALUE          64U
+#define THRESHOLD_P1_L4_INIT_VALUE          56U
+#define THRESHOLD_P1_L5_L6_INIT_VALUE       32U
+#define THRESHOLD_P1_L7_L8_INIT_VALUE       24U
+#define THRESHOLD_P1_L9_INIT_VALUE          40U
+#define THRESHOLD_P1_L10_INIT_VALUE         48U
+#define THRESHOLD_P1_L11_INIT_VALUE         52U
+#define THRESHOLD_P1_L12_INIT_VALUE         60
+#define THRESHOLD_P1_LEVEL_OFFSET           0U
+
+
+#define TVG_INITIAL_GAIN_DB                 58.5
+
 #define PACK_COMMAND_BYTE(cmd, addr) (((cmd & COMMAND_CMD_MASK) << COMMAND_CMD_POS) \
         | (addr & COMMAND_ADDR_MASK) << COMMAND_ADDR_POS)
 
@@ -114,7 +128,52 @@
 /*-------------------------------------------------Global variables--------------------------------------------------*/
 /*********************************************************************************************************************/
 
-typedef enum _PGA460_CMD_TYPE
+const float32 TVG_INIT_GAIN_DB = 58.5f;
+const float32 TVG_GAIN1_DB     = 58.5f;
+const float32 TVG_GAIN2_DB     = 59.5f;
+const float32 TVG_GAIN3_DB     = 67.5f;
+const float32 TVG_GAIN4_DB     = 71.5f;
+const float32 TVG_GAIN5_DB     = 77.5f;
+
+typedef enum _PGA460_PresetType
+{
+    PGA460_NEAR_PROFILE = 0,
+    PGA460_FAR_PROFILE,
+    PGA460_MAX_PRESET
+} PGA460_PresetType;
+
+typedef enum _PGA460_AbsoluteThresholdGainTiming
+{
+    PGA460_THR_TVG_100_USEC = 0,
+    PGA460_THR_TVG_200_USEC,
+    PGA460_THR_TVG_300_USEC,
+    PGA460_THR_TVG_400_USEC,
+    PGA460_THR_TVG_600_USEC,
+    PGA460_THR_TVG_800_USEC,
+    PGA460_THR_TVG_1000_USEC,
+    PGA460_THR_TVG_1200_USEC,
+    PGA460_THR_TVG_1400_USEC,
+    PGA460_THR_TVG_2000_USEC,
+    PGA460_THR_TVG_2400_USEC,
+    PGA460_THR_TVG_3200_USEC,
+    PGA460_THR_TVG_4000_USEC,
+    PGA460_THR_TVG_5200_USEC,
+    PGA460_THR_TVG_6400_USEC,
+    PGA460_THR_TVG_8000_USEC,
+    PGA460_THR_TVG_MAX_TIMING
+} PGA460_AbsoluteThresholdGainTiming;
+
+
+typedef enum _PGA460_AFEGainRangeSel
+{
+    PGA460_AFE_GAIN_RANGE_58_90_dB = 0,
+    PGA460_AFE_GAIN_RANGE_52_84_dB,
+    PGA460_AFE_GAIN_RANGE_46_78_dB,
+    PGA460_AFE_GAIN_RANGE_32_64_dB,
+    PGA460_AFE_GAIN_RANGE_MAX
+} PGA460_AFEGainRangeSel;
+
+typedef enum _PGA460_CmdType
 {
     PGA460_COMMAND_BURST_AND_LISTEN_PRESET_1 = 0,
     PGA460_COMMAND_BURST_AND_LISTEN_PRESET_2,
@@ -150,7 +209,7 @@ typedef enum _PGA460_CMD_TYPE
     RESERVED5,
     PGA460_COMMAND_MAX_COMMANDS
 
-} PGA460_CMD_TYPE;
+} PGA460_CmdType;
 
 typedef enum _PGA460_cmd_st
 {
@@ -170,15 +229,25 @@ volatile PGA460_comm_st pga460CommState;
 
 IfxDma_Dma dma;
 
+/* A "lazy" shadow of the PGA460 device.
+ * Used to provide an easy way to store internal PGA460 configs.
+ * This will not mirror the device exactly, but can be used to access
+ * device registers in a friendly way, and refer to last written/read configs if needed
+ */
+volatile PGA460_Reg pga460;
 /* Allocate TCS blocks 32-byte aligned */
 
-/* TX TCS block */
+/* Initialization TX TCS block */
 IFX_ALIGN(256) static uint32 __tcs0[6];
 
-/* RX TCS block */
+/* Initialization RX TCS block */
 IFX_ALIGN(256) static uint32 __tcs1[6];
 
+/* Normal operation TX TCS block */
+IFX_ALIGN(256) static uint32 __tcs0[6];
 
+/* Normal operation RX TCS block */
+IFX_ALIGN(256) static uint32 __tcs1[6];
 
 /*********************************************************************************************************************/
 /*--------------------------------------------Private Variables/Constants--------------------------------------------*/
@@ -288,6 +357,15 @@ void PGA460_InitInterface(void)
     IfxSrc_enable(src_tx);
 
     initDMA();
+
+}
+
+void PGA460_InitDevice(void)
+{
+    PGA460_InitInterface();
+
+
+
 
 }
 
@@ -517,9 +595,47 @@ void    PGA460_EEPROMRead(void)
     asclin_start_tx();
 }
 
+void PGA460_InitDecoupling(void)
+{
+
+    pga460.DECPL_TEMP.B.AFE_GAIN_RNG = PGA460_AFE_GAIN_RANGE_52_84_dB;
+    pga460.DECPL_TEMP.B.LPM_EN       = 0x00;
+}
+
+void     PGA460_InitTVGs(void)
+{
+
+    pga460.TVGAIN0.B.TVG_T0 = PGA460_THR_TVG_600_USEC;
+    pga460.TVGAIN0.B.TVG_T1 = PGA460_THR_TVG_600_USEC;
+    pga460.TVGAIN1.B.TVG_T2 = PGA460_THR_TVG_600_USEC;
+    pga460.TVGAIN1.B.TVG_T3 = PGA460_THR_TVG_600_USEC;
+    pga460.TVGAIN2.B.TVG_T4 = PGA460_THR_TVG_600_USEC;
+    pga460.TVGAIN2.B.TVG_T5 = PGA460_THR_TVG_600_USEC;
+
+
+}
 
 void     PGA460_initThresholds(void)
 {
+    pga460.P1_THR_0.B.TH_P1_T1  = PGA460_THR_TVG_600_USEC;
+    pga460.P1_THR_0.B.TH_P1_T2  = PGA460_THR_TVG_600_USEC;
+    pga460.P1_THR_1.B.TH_P1_T3  = PGA460_THR_TVG_600_USEC;
+    pga460.P1_THR_1.B.TH_P1_T4  = PGA460_THR_TVG_600_USEC;
+    pga460.P1_THR_2.B.TH_P1_T5  = PGA460_THR_TVG_600_USEC;
+    pga460.P1_THR_2.B.TH_P1_T6  = PGA460_THR_TVG_600_USEC;
+    pga460.P1_THR_3.B.TH_P1_T7  = PGA460_THR_TVG_600_USEC;
+    pga460.P1_THR_3.B.TH_P1_T8  = PGA460_THR_TVG_600_USEC;
+    pga460.P1_THR_4.B.TH_P1_T9  = PGA460_THR_TVG_800_USEC;
+    pga460.P1_THR_4.B.TH_P1_T10 = PGA460_THR_TVG_800_USEC;
+    pga460.P1_THR_5.B.TH_P1_T11 = PGA460_THR_TVG_800_USEC;
+    pga460.P1_THR_5.B.TH_P1_T12 = PGA460_THR_TVG_800_USEC;
+    pga460.P1_THR_6.U  = THRESHOLD_P1_L1_L2_INIT_VALUE;
+    pga460.P1_THR_7.U  = THRESHOLD_P1_L3_INIT_VALUE;
+    pga460.P1_THR_8.U  = THRESHOLD_P1_L4_INIT_VALUE;
+    pga460.P1_THR_9.U  = THRESHOLD_P1_L5_L6_INIT_VALUE;
+    pga460.P1_THR_10.U  = THRESHOLD_P1_L7_L8_INIT_VALUE;
+    pga460.P1_THR_11.B.TH_P1_L9 = THRESHOLD_P1_L9_INIT_VALUE;
+    pga460.P1_THR_12.B.TH_P1_L10 = THRESHOLD_P1_L12_INIT_VALUE;
 
 }
 

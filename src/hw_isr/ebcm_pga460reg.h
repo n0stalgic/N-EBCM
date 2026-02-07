@@ -38,10 +38,10 @@
 
 /**
  * @brief PGA460 Register Address Offsets
- * 
+ *
  * These offset macros allow portable register access without relying on packed structs.
  * Use with base address pointer or SPI read/write functions.
- * 
+ *
  * Example: reg_value = base_ptr[PGA460_REG_FREQUENCY_OFFSET];
  */
 
