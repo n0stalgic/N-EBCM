@@ -297,6 +297,7 @@ void EbcmSch_runTasks(IfxCpu_ResourceCpu cpuId)
         {
             cpu1execTaskCounter--;
         }
+        __enable();
     }
 }
 
