@@ -6,6 +6,8 @@ A miniature Anti-lock Braking System (ABS) demonstration project designed to exp
 
 This project explores basic principles of safety-critical embedded systems by implementing a functional ABS on a small-scale brake setup. The AURIX TC375's multi-core architecture provides seemingly countless facilities for safe hardware operation and software execution. I'm thinking I'll work on a CAN or SPI bootloader at some point in the future so that the application can be flashed via another MCU (I have an S32K I enjoy using).
 
+Additionally, Infineon has several application notes, documents, and example projects available that detail hardware configuration and usage as well as safety-critical operation. These docs and projects are heavily referenced in this project's implementation, of course with modifications to this use case.
+
 ## Core Assignment
 
 | Core | Function | Criticality |
@@ -50,21 +52,3 @@ The Vital Framework provides runtime execution path integrity monitoring:
 - **MPU Protection**: VFW data is protected via hardware Memory Protection Unit. The framework uses its own protection set with exclusive R/W access to the `vfw_safe0` memory region, while application code has read-only access.
 - **Stack Monitoring**: Stack painting enables high-watermark detection for stack overflow analysis.
 - **Safety Response**: On integrity failure, interrupts are disabled and the system enters a safe state.
-
-### Startup Flow
-
-```
-core0_main()
- ├── EbcmSsw_runAppSwStartup()
- │    ├── LBIST (may trigger warm reset)
- │    ├── MONBIST
- │    ├── MCU FW Check
- │    ├── MCU Startup Check
- │    ├── SMU Alive Test
- │    ├── Register Monitor Test
- │    └── MBIST
- ├── Lockstep Injection Test
- ├── VFW_Init() (MPU + checkpoint registry)
- ├── Hardware Init (LEDs, sensors, watchdog)
- └── Main Loop
-```
