@@ -1,10 +1,10 @@
 # N-EBCM
 
-A miniature Anti-lock Braking System (ABS) demonstration project designed to showcase safety-critical software/firmware development practices. Runs on an Infineon AURIX TC375 Lite Kit and controls a single brake rotor test rig.
+A miniature Anti-lock Braking System (ABS) demonstration project designed to experiment with safety-critical software/firmware. Runs on an Infineon AURIX TC375 Lite Kit and controls a single brake rotor test rig.
 
 ## Overview
 
-This project demonstrates the principles of safety-critical embedded systems by implementing a functional ABS on a small-scale brake setup. The AURIX TC375's multi-core architecture allows for proper separation of safety-critical and non-critical functions.
+This project explores basic principles of safety-critical embedded systems by implementing a functional ABS on a small-scale brake setup. The AURIX TC375's multi-core architecture provides seemingly countless facilities for safe hardware operation and software execution. I'm thinking I'll work on a CAN or SPI bootloader at some point in the future so that the application can be flashed via another MCU (I have an S32K I enjoy using).
 
 ## Core Assignment
 
