@@ -15,6 +15,7 @@
 #include "ebcm_led.h"
 #include "IfxPort.h"
 #include "vfw_checkpoint.h"
+#include "ebcm_main.h"
 
 /*********************************************************************************************************************/
 /*------------------------------------------------------Macros-------------------------------------------------------*/
@@ -172,6 +173,8 @@ void EbcmHw_initLeds(void)
     lc2.ebcmLed = EBCM_LED2;
     lc2.count = 0;
     lc2.activePattern = ledPatternOff;
+
+    ebcmStatus.ledsInitd = TRUE;
 
 }
 
