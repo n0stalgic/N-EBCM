@@ -74,7 +74,7 @@ typedef enum _PGA460_CurrentLimitDisabledType
 {
     PGA460_CurrentLimitEnabled = 0,
     PGA460_CurrentLimitDisabled
-} PGA460_CurrentLimitDisabled;
+} PGA460_CurrentLimitDisabledType;
 
 /** \brief Decouple Time/Temperature Selection */
 typedef enum _PGA460_DecoupleTimeTemperatureSel
@@ -115,6 +115,22 @@ typedef enum _PGA460_SRDigitalGainControl
     PGA460_SRDigitalGain_16x,
     PGA460_SRDigitalGain_32x
 } PGA460_SRDigitalGainCtrl;
+
+typedef enum _PGA460_NonlinearScalingExponentSel
+{
+    PGA460_NonlinearScaling_1_5 = 0,
+    PGA460_NonlinearScaling_2_0
+
+} PGA460_NonlinearScalingExponentSel;
+
+typedef enum _PGA460_NonlinearScalingStartingThr
+{
+    PGA460_NonlinearScalingStart_TH9 = 0,
+    PGA460_NonlinearScalingStart_TH10,
+    PGA460_NonlinearScalingStart_TH11,
+    PGA460_NonlinearScalingStart_TH12
+
+} PGA460_NonlinearScalingStartingThr;
 
 /** \brief Threshold and TVG Timing Values */
 typedef enum _PGA460_AbsoluteThresholdGainTiming
@@ -202,6 +218,7 @@ typedef struct _PGA460_Config
     uint8                       burstPulseCountP1;   /**< Number of burst pulses for P1 */
 
     /* Current limit P1 Configuration */
+    PGA460_CurrentLimitDisabledType     currentLimitType;
     uint8                       currentLimitP1;      /**< Current limit for P1 */
 
 
@@ -214,6 +231,7 @@ typedef struct _PGA460_Config
 
     uint8                       lpfCutoffFreq;       /**< Lowpass filter cutoff frequency */
     uint8                       recordTimeLengthP1;  /**< Record time length for P1 */
+
 
 
     /* Digital gain control */
@@ -245,6 +263,11 @@ typedef struct _PGA460_Config
     uint8                              frequencyDiagAbsErrTimeThreshold;
     uint8                              saturationDiagThreshold;
     PGA460_P1_NonLinearScalingType     P1_NLS;
+
+    uint8                                    noiseLevel;
+    PGA460_NonlinearScalingStartingThr       Scale_N;
+    PGA460_NonlinearScalingExponentSel       Scale_K;
+
 
 
 } PGA460_Config;
@@ -286,7 +309,7 @@ void     PGA460_InitDevice(void);
  *  PGA460_InitWithConfig(&myConfig);
  *  \endcode
  */
-void     PGA460_InitWithConfig(const PGA460_Config* config);
+void     PGA460_UltrasonicInit(const PGA460_Config* config);
 
 /** \brief Initialize DMA for PGA460 communication */
 void     PGA460_InitDMA(void);
@@ -316,7 +339,7 @@ void     PGA460_ProcessFrame(void);
 void     PGA460_InitInterface(void);
 
 /** \brief Read entire EEPROM contents from PGA460 */
-void     PGA460_EEPROMRead(void);
+void    PGA460_EEPROMRead(uint64 timeoutMs);
 
 /** \brief Read a single register from PGA460
  *
@@ -397,6 +420,30 @@ void    PGA460_SetNonlinearScalingP1(const PGA460_Config* config);
  *  \param config Pointer to configuration structure. If NULL, function returns without action.
  */
 void   PGA460_SetDigitalGainsP1(const PGA460_Config* config);
+
+/** \brief Set Saturation diagnostic threshold level
+ *
+ *  \param config Pointer to configuration structure. If NULL, function returns without action.
+ */
+void    PGA460_SetSaturationDiagThreshold(const PGA460_Config* config);
+
+/** \brief Set freqneyc diagnostic time diagnostic threshold level
+ *
+ *  \param config Pointer to configuration structure. If NULL, function returns without action.
+ */
+void PGA460_SetFrequencyDiagErrThreshold(const PGA460_Config* config);
+
+/** \brief Set DSP scaling and noise level
+ *
+ *  \param config Pointer to configuration structure. If NULL, function returns without action.
+ */
+void PGA460_SetDSPScaling(const PGA460_Config* config);
+
+/** \brief Trigger ultrasonic burst measurements
+ *
+ */
+void PGA460_BurstListenP1(void);
+
 
 /** \brief Check if PGA460 is available for new commands
  *
