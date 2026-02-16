@@ -35,6 +35,7 @@
 #include "ebcm_sched.h"
 #include "ebcm_wdt.h"
 #include "ebcm_fce_crc.h"
+#include "ebcm_vcom.h"
 
 /*********************************************************************************************************************/
 /*------------------------------------------------------Macros-------------------------------------------------------*/
@@ -91,22 +92,12 @@ void EbcmHw_initEbcm(EbcmSysInfo* ebcmInfo, IfxCpu_ResourceCpu cpuIdx)
         default: while(1) __disable(); break;
     }
 
+    init_UART();
     EbcmHw_initLeds();
+    FCE_init();
+    EbcmHw_initDts();
     EbcmSch_initGpt12_monitor();
-    EbcmHw_initEbcmSafetyMechanisms();
-
-    EbcmHw_initWdt(WDT_RELOAD);
-
 
     ebcmStatus.initComplete = TRUE;
 
 }
-
-void EbcmHw_initEbcmSafetyMechanisms(void)
- {
-
-     // TODO: init safety mechanisms here like die temp sensor, FCE, LMU data integrity, CPU data, integrity, etc
-     EbcmHw_initDts();
-
-      return;
- }

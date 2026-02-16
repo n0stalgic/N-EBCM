@@ -65,6 +65,7 @@ void core0_main(void)
     IfxScuWdt_disableCpuWatchdog(IfxScuWdt_getCpuWatchdogPassword());
     IfxScuWdt_disableSafetyWatchdog(IfxScuWdt_getSafetyWatchdogPassword());
 
+    /* Wait for CPU sync event */
     IfxCpu_emitEvent(&cpuSyncEvent);
     IfxCpu_waitEvent(&cpuSyncEvent, 1);
 
@@ -76,8 +77,8 @@ void core0_main(void)
         __debug();
     }
 
-    init_UART();
-    FCE_init();
+    EbcmSch_InitStm(&cpuStm0,  (IfxCpu_ResourceCpu)IfxCpu_getCoreIndex());
+    EbcmHw_initEbcm(&ebcmInfo, (IfxCpu_ResourceCpu)IfxCpu_getCoreIndex());
     VFW_Init();
     initShellInterface();
 
@@ -91,7 +92,7 @@ void core0_main(void)
 
 
     DPRINTF(ENDLINE);
-    DPRINTF("Compiler: %s, ver:%u.%u\n", COMPILER_NAME, COMPILER_VERSION, COMPILER_REVISION );
+    DPRINTF("Compiler: %s, ver:%u.%u"ENDLINE, COMPILER_NAME, COMPILER_VERSION, COMPILER_REVISION );
     DPRINTF("\r\nCORE0 Lockstep         [%s]"ENDLINE, core0_lockstep_en ? "ENABLED" : "DISABLED");
     DPRINTF("CORE1 Lockstep         [%s]"ENDLINE, core1_lockstep_en ? "ENABLED" : "DISABLED");
     DPRINTF("LBIST                  [%s]"ENDLINE, str);
@@ -103,15 +104,11 @@ void core0_main(void)
     DPRINTF("SRAM_BIST              [%s]\r\n"ENDLINE, ebcmStatus.sswStatus.mbistStatus   ? "PASSED" : "FAILED");
     DPRINTF("Safe SW boot procedure completed.\r\n"ENDLINE);
 
-    /* Wait for CPU sync event */
-
-
-    EbcmHw_initEbcm(&ebcmInfo, IfxCpu_ResourceCpu_0);
-    EbcmSch_InitStm(&cpuStm0, (IfxCpu_ResourceCpu)IfxCpu_getCoreIndex());
+    EbcmHw_initWdt(WDT_RELOAD);
 
     while(1)
     {
-        runShellInterface();
-        EbcmSch_runTasks((IfxCpu_ResourceCpu)IfxCpu_getCoreIndex());
+       runShellInterface();
+       EbcmSch_runTasks((IfxCpu_ResourceCpu)IfxCpu_getCoreIndex());
     }
 }

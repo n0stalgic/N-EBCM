@@ -1,5 +1,5 @@
 /**********************************************************************************************************************
- * \file Cpu1_Main.c
+ * \file ASCLIN_Shell_UART.h
  * \copyright Copyright (C) Infineon Technologies AG 2019
  *
  * Use of this file is subject to the terms of use agreed between (i) you or the company in which ordinary course of
@@ -24,41 +24,19 @@
  * CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
  * IN THE SOFTWARE.
  *********************************************************************************************************************/
-#include <ebcm_vcom.h>
-#include <ssw_lbist.h>
-#include <ssw.h>
-#include "Ifx_Types.h"
-#include "IfxCpu.h"
-#include "IfxScuWdt.h"
-#include "Ifx_Cfg_Ssw.h"
-#include "IfxSmu.h"
-#include "IfxSmu_cfg.h"
-#include "ebcm_main.h"
-#include "ebcm_sched.h"
-#include "vfw_registry.h"
-#include "ebcm_fce_crc.h"
 
-extern IfxCpu_syncEvent cpuSyncEvent;
-EbcmStmCfg cpuStm1;
+#ifndef SHELL_H_
+#define SHELL_H_
 
+/*********************************************************************************************************************/
+/*------------------------------------------------------Macros-------------------------------------------------------*/
+/*********************************************************************************************************************/
+#define ENDLINE     "\r\n"
 
+/*********************************************************************************************************************/
+/*------------------------------------------------Function Prototypes------------------------------------------------*/
+/*********************************************************************************************************************/
+void initShellInterface(void);
+void runShellInterface(void);
 
-void core1_main(void)
-{
-    IfxCpu_enableInterrupts();
-
-    /* !!WATCHDOG1 IS DISABLED HERE!!
-     * Enable the watchdog and service it periodically if it is required
-     */
-    IfxScuWdt_disableCpuWatchdog(IfxScuWdt_getCpuWatchdogPassword());
-
-    /* Wait for CPU sync event */
-    IfxCpu_emitEvent(&cpuSyncEvent);
-    IfxCpu_waitEvent(&cpuSyncEvent, 1);
-
-   // EbcmSch_InitStm(&cpuStm1, (IfxCpu_ResourceCpu)IfxCpu_getCoreIndex());
-
-    while(1)
-    {
-    }
-}
+#endif /* SHELL_H_ */

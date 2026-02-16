@@ -55,7 +55,7 @@ volatile boolean dtsMeasureAvailable;
 /*********************************************************************************************************************/
 /*------------------------------------------------Function Prototypes------------------------------------------------*/
 /*********************************************************************************************************************/
-IFX_INTERRUPT(EbcmHw_dtsIsr, CPU2_VECT_TABLE_ID, ISR_PRIORITY_DTS);
+IFX_INTERRUPT(EbcmHw_dtsIsr, CPU0_VECT_TABLE_ID, ISR_PRIORITY_DTS);
 
 
 /*********************************************************************************************************************/
@@ -137,10 +137,13 @@ void EbcmHw_initDts(void)
     dtsConf.isrPriority = ISR_PRIORITY_DTS;             /* Set the interrupt priority for new measurement events     */
     dtsConf.isrTypeOfService = IfxSrc_Tos_cpu0;         /* Set the service provider responsible for handling
                                                          * the interrupts                                            */
+
     IfxDts_Dts_initModule(&dtsConf);                    /* Initialize the DTS with the given configuration           */
 
 
     /* now initialize die temp sensor of the DTS core */
+    uint16         password = IfxScuWdt_getCpuWatchdogPassword();
+    IfxScuWdt_clearCpuEndinit(password);
 
 
     /* Clear upper and lower overflow flags */
@@ -156,6 +159,8 @@ void EbcmHw_initDts(void)
     MODULE_PMS.DTSLIM.B.UPPER = IfxDts_Dts_convertFromCelsius(MAX_TEMP_LIMIT);
 
     MODULE_SCU.DTSCLIM.B.EN = TRUE;
+
+    IfxScuWdt_setCpuEndinit(password);
 
     /* Set default values */
     ebcmStatus.dieTempProfile.dieTempLowest = MIN_TEMP_LIMIT;

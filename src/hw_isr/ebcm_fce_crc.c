@@ -99,6 +99,10 @@ void FCE_init(void)
 
 uint32 FCE_calc_CRC32(const uint8* data, uint16 len, uint32 seed)
 {
+    if (!fceInitComplete)
+    {
+        return 0xFFFFFFFF;
+    }
     uint32 result  = 0x0;
 
     FCE_LENGTH0.U = 0xFACECAFE;
