@@ -31,6 +31,7 @@
 /*********************************************************************************************************************/
 #include "IfxAsclin_Asc.h"
 #include "IfxCpu_Irq.h"
+#include "IfxStdIf_DPipe.h"
 #include <stdio.h>
 #include <stdarg.h>
 #include "ebcm_cfg.h"
@@ -44,27 +45,42 @@
 #define SERIAL_PIN_TX           IfxAsclin0_TX_P14_0_OUT                     /* TX pin of the board                  */
 
 
-#define ASC_TX_BUFFER_SIZE      64                                          /* Definition of the buffer size        */
+#define ASC_TX_BUFFER_SIZE      64                                          /* Definition of the TX buffer size     */
+#define ASC_RX_BUFFER_SIZE      128                                         /* Definition of the RX buffer size     */
 
 /*********************************************************************************************************************/
 /*-------------------------------------------------Global variables--------------------------------------------------*/
 /*********************************************************************************************************************/
-extern IfxAsclin_Asc g_asc;                                                        /* Declaration of the ASC handle        */
+extern IfxAsclin_Asc g_asc;                                                /* Declaration of the ASC handle        */
+IfxStdIf_DPipe g_ascStandardInterface;                                    /* Standard interface object            */
 
 /* The transfer buffers allocate memory for the data itself and for FIFO runtime variables.
  * 8 more bytes have to be added to ensure a proper circular buffer handling independent from
  * the address to which the buffers have been located.
  */
-uint8 g_ascTxBuffer[ASC_TX_BUFFER_SIZE + sizeof(Ifx_Fifo) + 8];             /* Declaration of the FIFOs parameters  */
+uint8 g_ascTxBuffer[ASC_TX_BUFFER_SIZE + sizeof(Ifx_Fifo) + 8];             /* Declaration of the TX FIFO parameters */
+uint8 g_ascRxBuffer[ASC_RX_BUFFER_SIZE + sizeof(Ifx_Fifo) + 8];             /* Declaration of the RX FIFO parameters */
 
 /*********************************************************************************************************************/
 /*---------------------------------------------Function Implementations----------------------------------------------*/
 /*********************************************************************************************************************/
-IFX_INTERRUPT(asclin0_Tx_ISR, 0, ISR_PRIORITY_ASCLIN0_TX);                         /* Adding the Interrupt Service Routine */
+IFX_INTERRUPT(asclin0_Tx_ISR, 0, ISR_PRIORITY_ASCLIN0_TX);                   /* Adding the Interrupt Service Routine */
+IFX_INTERRUPT(asclin0_Rx_ISR, 0, ISR_PRIORITY_ASCLIN0_RX);
+IFX_INTERRUPT(asclin0_Err_ISR, 0, ISR_PRIORITY_ASCLIN0_ER);
 
 void asclin0_Tx_ISR(void)
 {
-    IfxAsclin_Asc_isrTransmit(&g_asc);
+    IfxStdIf_DPipe_onTransmit(&g_ascStandardInterface);
+}
+
+void asclin0_Rx_ISR(void)
+{
+    IfxStdIf_DPipe_onReceive(&g_ascStandardInterface);
+}
+
+void asclin0_Err_ISR(void)
+{
+    IfxStdIf_DPipe_onError(&g_ascStandardInterface);
 }
 
 void init_UART(void)
@@ -77,12 +93,16 @@ void init_UART(void)
     ascConfig.baudrate.baudrate = SERIAL_BAUDRATE;
 
     /* ISR priorities and interrupt target */
+    ascConfig.interrupt.rxPriority = (uint8) ISR_PRIORITY_ASCLIN0_RX;
     ascConfig.interrupt.txPriority = (uint8) ISR_PRIORITY_ASCLIN0_TX;
+    ascConfig.interrupt.erPriority = (uint8) ISR_PRIORITY_ASCLIN0_ER;
     ascConfig.interrupt.typeOfService = IfxCpu_Irq_getTos(IfxCpu_getCoreIndex());
 
     /* FIFO configuration */
     ascConfig.txBuffer = &g_ascTxBuffer;
     ascConfig.txBufferSize = ASC_TX_BUFFER_SIZE;
+    ascConfig.rxBuffer = &g_ascRxBuffer;
+    ascConfig.rxBufferSize = ASC_RX_BUFFER_SIZE;
 
     /* Port pins configuration */
     const IfxAsclin_Asc_Pins pins =
@@ -96,6 +116,7 @@ void init_UART(void)
     ascConfig.pins = &pins;
 
     IfxAsclin_Asc_initModule(&g_asc, &ascConfig);                       /* Initialize module with above parameters  */
+    IfxStdIf_DPipe_ascInit(&g_ascStandardInterface, &g_asc);
 }
 
 void vcom_Print(const char *format, ...)
@@ -108,7 +129,7 @@ void vcom_Print(const char *format, ...)
     count = (Ifx_SizeT)vsnprintf(buffer, sizeof(buffer), format, args);
     va_end(args);
 
-    IfxAsclin_Asc_write(&g_asc, buffer, &count, TIME_INFINITE);
+    IfxStdIf_DPipe_write(&g_ascStandardInterface, (uint8 *)buffer, &count, TIME_INFINITE);
 }
 
 void send_UART_message(void)

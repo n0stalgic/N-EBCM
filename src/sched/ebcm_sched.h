@@ -75,6 +75,12 @@ typedef struct
 
 #define OVERRUN_REPORT_BUF_SIZE  8U
 
+extern volatile uint32 cpu0execTaskCounter;
+extern volatile uint32 cpu1execTaskCounter;
+extern volatile uint32 cpu2execTaskCounter;
+extern volatile Task* core0_currentTask;
+extern volatile Task* core1_currentTask;
+
 
 /*********************************************************************************************************************/
 /*--------------------------------------------Private Variables/Constants--------------------------------------------*/

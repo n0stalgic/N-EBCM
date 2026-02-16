@@ -267,6 +267,7 @@ void EbcmSch_runTasks(IfxCpu_ResourceCpu cpuId)
 
                     if (cpuId == IfxCpu_ResourceCpu_0)
                     {
+                        core0_currentTask = targetTask;
                         runWithUnboundedExecDetectionCore0(targetTask->deadlineGuardReload, targetTask->func);
                         VFW_IntegrityCheck();
 
@@ -274,6 +275,7 @@ void EbcmSch_runTasks(IfxCpu_ResourceCpu cpuId)
 
                     else if (cpuId == IfxCpu_ResourceCpu_1)
                     {
+                        core1_currentTask = targetTask;
                         runWithUnboundedExecDetectionCore1(targetTask->deadlineGuardReload, targetTask->func);
                         VFW_IntegrityCheck();
                     }

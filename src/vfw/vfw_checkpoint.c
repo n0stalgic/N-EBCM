@@ -19,6 +19,9 @@
 #include "IfxPort.h"
 #include "string.h"
 #include "stdio.h"
+#include "ebcm_fce_crc.h"
+#include "vfw_utils.h"
+
 
 /*********************************************************************************************************************/
 /*-------------------------------------------------Global variables--------------------------------------------------*/
@@ -57,8 +60,6 @@ static void VFW_ProtectionInit(void)
 
     /* Set 2 : Vital framework safe region (DPR 15 restricted) */
     VFW_defineDataProtectionRange((uint32) __VFW_SAFE0, (uint32) __VFW_SAFE0_END , DATA_PROTECTION_RANGE_15);
-
-    DPRINTF("Vital Framework Safe Mem Region: 0x%x - 0x%x\r\n", (uint32)__VFW_SAFE0, (uint32) __VFW_SAFE0_END );
 
     /* PRS 1: Read only - Allow application to read vital framework data */
     VFW_enableDataRead(PROTECTION_SET_1, DATA_PROTECTION_RANGE_15);
@@ -108,16 +109,11 @@ void VFW_Init(void)
 
 static uint32 VFW_generateSignature(const char* str)
 {
-    /* DJB2 Hash Algorithm */
-    uint32 hash = 5381;
-    int c;
+    IFX_ASSERT (IFX_VERBOSE_LEVEL_ERROR, strlen(str) <= VFW_CHECKPOINT_NAME_MAX_LEN);
 
-    while ((c = *str++))
-    {
-        hash = ((hash << 5) + hash) + c; /* hash * 33 + c */
-    }
+    uint32 crc = VFW_crc32((const uint8* ) str, strlen(str));
 
-    return hash;
+    return crc;
 }
 
 void VFW_CreateCheckpoint(VfwCheckpoint* cp, const char* name)
@@ -125,8 +121,8 @@ void VFW_CreateCheckpoint(VfwCheckpoint* cp, const char* name)
     /* Switch to special memory access for VFW updates */
     set_active_protection_set(PROTECTION_SET_0);
 
-    if (cp == NULL_PTR) return;
-    if (vfwRegistryCount >= VFW_MAX_CHECKPOINTS) return;
+    IFX_ASSERT (IFX_VERBOSE_LEVEL_ERROR, cp != NULL_PTR);
+    IFX_ASSERT (IFX_VERBOSE_LEVEL_ERROR, vfwRegistryCount >= VFW_MAX_CHECKPOINTS);
 
     /* Initialize Object */
     cp->name = name;

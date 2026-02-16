@@ -65,6 +65,7 @@ typedef struct
     boolean            unlockConfig;
     boolean            initComplete;
     DieTempStatusType  dieTempProfile;
+    boolean            ledsInitd;
 
 } EbcmStatus;
 

@@ -30,8 +30,7 @@
  */
 typedef struct
 {
-    /* Metadata (Database) */
-    const char* name;           /**< Human readable name (Flash) */
+    const char*  name;           /**< Human readable name (Flash) */
     uint32      signature;      /**< Auto-generated hash */
     uint16      id;             /**< Registry Index */
     boolean     isRegistered;   /**< Registration State */

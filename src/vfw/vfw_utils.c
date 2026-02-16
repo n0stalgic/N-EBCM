@@ -1,10 +1,10 @@
 /******************************************************************************
- * @file    {file_name}
+ * @file    vfw_utils.c
  * @brief   Add brief here
  *
  * MIT License
  *
- * Copyright (c) 2025 n0stalgic
+ * Copyright (c) 2026 n0stalgic
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -25,67 +25,19 @@
  * SOFTWARE.
  *****************************************************************************/
 
-#ifndef CONFIG_EBCM_CFG_H_
-#define CONFIG_EBCM_CFG_H_
 
 /*********************************************************************************************************************/
 /*-----------------------------------------------------Includes------------------------------------------------------*/
 /*********************************************************************************************************************/
+#include "vfw_utils.h"
+#include "ebcm_fce_crc.h"
 
 /*********************************************************************************************************************/
 /*------------------------------------------------------Macros-------------------------------------------------------*/
 /*********************************************************************************************************************/
-#define EBCM_CFG_SSW_ENABLE_LBIST_BOOT            1
-#define EBCM_CFG_SSW_ENABLE_LBIST_APPSW           1
-#define EBCM_CFG_SSW_ENABLE_MONBIST               1
-#define EBCM_CFG_SSW_ENABLE_MCU_FW_CHECK          1
-#define EBCM_CFG_SSW_ENABLE_MCU_STARTUP           1
-#define EBCM_CFG_SSW_ENABLE_ALIVE_ALARM_TEST      1
-#define EBCM_CFG_SSW_ENABLE_REG_MONITOR_TEST      1
-#define EBCM_CFG_SSW_ENABLE_MBIST                 1
-
-/* Number of STM ticks per millisecond */
-#define IFX_CFG_STM_TICKS_PER_MS                  100000
-#define IFX_CFG_STM_TICKS_PER_US                  100
-
-#define LED1_EBCM_ALIVE                           &MODULE_P00,5
-#define LED2_ALRM_DETECTED                        &MODULE_P00,6
-
-/* [°C] difference in the redundant die temperature as specified in the safety manual */
-#define MAX_DIE_TEMP_DIFF                        9.0
-
-#define CPU0_VECT_TABLE_ID                       0
-#define CPU1_VECT_TABLE_ID                       1
-#define CPU2_VECT_TABLE_ID                       2
-
-#define CPU_WHICH_RUN_SMU                        CPU0_VECT_TABLE_ID
-
-#define ISR_PRORITY_SMU_ISR_0                    5
-#define ISR_PRORITY_SMU_ISR_1                    6
-#define ISR_PRORITY_SMU_ISR_2                    7
-#define ISR_PRIORITY_GPT12_TIMER                 3
-#define ISR_PRIORITY_OS_TICK                     4       /* Define the tick for the Application */
-#define ISR_PRIORITY_DMA_CH2                     5       /* DMA ISR priority for final transaction in linked list */
-#define ISR_PRIORITY_FCE_ER                      13      /* Flexible CRC Engine */
-#define ISR_PRIORITY_DTS                         14      /* Die Temperature Sensor */
-#define ISR_PRIORITY_ASCLIN1_RX                  15      /* Ultrasonic sensor RX Prio */
-#define ISR_PRIORITY_ASCLIN1_TX                  16      /* Ultrasonic sensor TX Prio */
-#define ISR_PRIORITY_DMA                         17      /* DMA for PGA460 UART Prio */
-#define ISR_PRIORITY_ASCLIN0_RX                  18      /* Priority of the UART0 VCOM RX ISR                  */
-#define ISR_PRIORITY_ASCLIN0_TX                  19      /* Priority of the UART0 VCOM TX ISR                  */
-#define ISR_PRIORITY_ASCLIN0_ER                  20      /* Priority of the UART0 VCOM ERR ISR                 */
-
-
-
-#define __UNLOCK_CPU_SAFETY_WD() IfxScuWdt_clearCpuEndinit(IfxScuWdt_getCpuWatchdogPassword())
-#define __LOCK_CPU_SAFETY_WD()   IfxScuWdt_setCpuEndinit(IfxScuWdt_getCpuWatchdogPassword())
 
 /*********************************************************************************************************************/
 /*-------------------------------------------------Global variables--------------------------------------------------*/
-/*********************************************************************************************************************/
-
-/*********************************************************************************************************************/
-/*-------------------------------------------------Data Structures---------------------------------------------------*/
 /*********************************************************************************************************************/
 
 /*********************************************************************************************************************/
@@ -96,5 +48,30 @@
 /*------------------------------------------------Function Prototypes------------------------------------------------*/
 /*********************************************************************************************************************/
 
+/*********************************************************************************************************************/
+/*---------------------------------------------Function Implementations----------------------------------------------*/
+/*********************************************************************************************************************/
 
-#endif /* CONFIG_EBCM_CFG_H_ */
+uint32 VFW_crc32(const uint8* buf, uint16 len)
+{
+    IFX_ASSERT(IFX_VERBOSE_LEVEL_ERROR, str != NULL_PTR);
+
+    /* use the CRC hardware accelerator with no mismatch checking  */
+    uint32 crc = FCE_calc_CRC32(buf, (len & 0xFFFFU), 0xFFFFFFFFU);
+
+    return crc;
+}
+
+uint32 VFW_swap32(uint32 val)
+{
+
+    return (((val & 0x000000FF) << 24) |
+            ((val & 0x0000FF00) << 8)  |
+            ((val & 0xFF000000) >> 24) |
+            ((val & 0x00FF0000) >> 8));
+}
+
+uint16 VFW_swap16(uint16 val)
+{
+    return (((val & 0xFF00 >> 8) | (val & 0x00FF) << 8));
+}

@@ -34,6 +34,7 @@
 #include "IfxCpu.h"
 #include "ebcm_sched.h"
 #include "ebcm_wdt.h"
+#include "ebcm_fce_crc.h"
 
 /*********************************************************************************************************************/
 /*------------------------------------------------------Macros-------------------------------------------------------*/
@@ -105,6 +106,7 @@ void EbcmHw_initEbcmSafetyMechanisms(void)
  {
 
      // TODO: init safety mechanisms here like die temp sensor, FCE, LMU data integrity, CPU data, integrity, etc
+     EbcmHw_initDts();
 
       return;
  }

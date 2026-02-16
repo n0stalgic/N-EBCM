@@ -77,8 +77,10 @@
 #define COMMAND_CMD_MASK        0x1F
 #define COMMAND_ADDR_MASK       0x7
 
-#define COMMAND_METADATA_BYTE_COUNT         0x3
+#define COMMAND_METADATA_BYTE_COUNT         0x2 // sync + CRC
 #define RESP_METADATA_BYTE_COUNT            0x2
+
+#define PGA460_CMD_DATA_LEN    ASC_TX_BUFFER_SIZE - COMMAND_METADATA_BYTE_COUNT
 
 #define CMD_BL_P1_DATA_LEN                  0x1
 #define CMD_BL_P2_DATA_LEN                  0x1
@@ -136,13 +138,20 @@
 /*-------------------------------------------------Global variables--------------------------------------------------*/
 /*********************************************************************************************************************/
 
-#define TVG_INIT_GAIN_DB             114U   // with 52-84dB range, init gain is 58.5 dB;
+
+/* The following TVGAINx values result in the above floating point gains, refer to PGA460 datasheet for formulas */
+#define TVG_INIT_GAIN_DB             0U   // with 52-84dB range, init gain is 52.5 dB;
+#define TVG_GAIN1_DB                 2U   // 53.5 dB
+#define TVG_GAIN2_DB                 6U   // 55.5
+#define TVG_GAIN3_DB                 18U  // 61.5
+#define TVG_GAIN4_DB                 26U  // 65.5
+#define TVG_GAIN5_DB                 38U  // 71.5
+
+
 #define BANDPASS_FILTER_WIDTH_FACTOR 1U     // Bandwidth = 2 * (BPF_BW + 1) [kHz]
-const float32 TVG_GAIN1_DB     = 58.5f;
-const float32 TVG_GAIN2_DB     = 59.5f;
-const float32 TVG_GAIN3_DB     = 67.5f;
-const float32 TVG_GAIN4_DB     = 71.5f;
-const float32 TVG_GAIN5_DB     = 77.5f;
+
+
+
 
 /** \brief Default PGA460 Configuration
  *  This configuration uses the hardcoded values that were previously defined as macros.
@@ -161,6 +170,12 @@ const PGA460_Config PGA460_DefaultConfig = {
     .tvgT3 = PGA460_THR_TVG_600_USEC,
     .tvgT4 = PGA460_THR_TVG_600_USEC,
     .tvgT5 = PGA460_THR_TVG_600_USEC,
+    .tvgG1 = TVG_GAIN1_DB,
+    .tvgG2 = TVG_GAIN2_DB,
+    .tvgG3 = TVG_GAIN3_DB,
+    .tvgG4 = TVG_GAIN4_DB,
+    .tvgG5 = TVG_GAIN5_DB,
+    .freqShift = 0x0,
 
     .initGain     = TVG_INIT_GAIN_DB,
     .bpfBandwidth = BANDPASS_FILTER_WIDTH_FACTOR,
@@ -248,8 +263,9 @@ typedef enum _PGA460_CmdType
 typedef enum _PGA460_cmd_st
 {
     ST_IDLE,
-    ST_CMD_IN_FLIGHT,
-    ST_CMD_FINISHED,
+    ST_IN_FLIGHT,
+    ST_AWAIT_RESPONSE,
+    ST_CMD_DONE,
     ST_CMD_ERR
 } PGA460_comm_st;
 
@@ -264,14 +280,15 @@ typedef struct _PGA460_CommandParams
 {
     PGA460_CmdType cmdType;
     uint8 pga_addr;
-    uint8 data[ASC_TX_BUFFER_SIZE - COMMAND_METADATA_BYTE_COUNT];
+    uint8 data[PGA460_CMD_DATA_LEN];
     uint8 dataLen;
 } PGA460_CommandParams;
 
 IfxAsclin_Asc asc_1;
 
-uint8 pga460TxBuffer[ASC_TX_BUFFER_SIZE];
-uint8 pga460RxBuffer[ASC_RX_BUFFER_SIZE];
+/* place in non-cacheable CPU2 LMU region */
+__at(0xb0020000) uint8 pga460TxBuffer[ASC_TX_BUFFER_SIZE];
+__at(0xb0020300) uint8 pga460RxBuffer[ASC_RX_BUFFER_SIZE];
 
 volatile boolean resp_recvd = FALSE;
 volatile uint8  tx_bytes = 0;
@@ -307,6 +324,8 @@ __attribute__((unused)) IFX_ALIGN(256) static uint32 __tcs3[6];
 /*********************************************************************************************************************/
 /*--------------------------------------------Private Variables/Constants--------------------------------------------*/
 /*********************************************************************************************************************/
+
+volatile PGA460_CmdType activeCommand;
 
 static const PGA460_CommandInfo commandTable[PGA460_COMMAND_MAX_COMMANDS] = {
     [PGA460_COMMAND_BURST_AND_LISTEN_PRESET_1] = {
@@ -456,9 +475,15 @@ static void unpack_EEPROMBulkRead(void);
 IFX_INTERRUPT(DMA_TX_ISR, CPU2_VECT_TABLE_ID, DMA_TX_CHANNEL);
 void DMA_TX_ISR(void)
 {
-    if (DMA_CHCSR016.B.TCOUNT == 0 && DMA_TSR016.B.HTRE == 0)
+    TxComplete = TRUE;
+    if (activeCommand < PGA460_COMMAND_MAX_COMMANDS && commandTable[activeCommand].expectsResponse)
     {
-        TxComplete = TRUE;
+        pga460CommState = ST_AWAIT_RESPONSE;
+    }
+    else
+    {
+        pga460CommState = ST_CMD_DONE;
+        activeCommand = PGA460_COMMAND_MAX_COMMANDS;
     }
 }
 
@@ -467,7 +492,8 @@ void DMA_RX_ISR(void)
 {
     if (DMA_CHCSR015.B.TCOUNT == 0)
     {
-        pga460CommState = ST_CMD_FINISHED;
+        pga460CommState = ST_CMD_DONE;
+        activeCommand = PGA460_COMMAND_MAX_COMMANDS;
     }
 }
 
@@ -479,8 +505,8 @@ static void dma_init_tcs(void)
     __tcs0[1] = 0x00; /* SDCRC */
     __tcs0[2] = (uint32) pga460TxBuffer; /* SADR */
     __tcs0[3] = (uint32) &asc_1.asclin->TXDATA.U; /* DADR */
-    __tcs0[4] = 0x0C200088;      /* ADICR: SMF = 0x2, INCD=0x1, DCBE=0x1, INCS=0x1 */
-    __tcs0[5] = 0x00080001;      /* CHCFGR: TREL=0x1, RROAT=0x0 PRSEL=0x0 (HW req)  */
+    __tcs0[4] = 0x08200088;      /* ADICR: SMF = 0x2, INCD=0x1, DCBE=0x1, INCS=0x1 */
+    __tcs0[5] = 0x0000000A;      /* CHCFGR: TREL=0x1, RROAT=0x0 PRSEL=0x0 (HW req)  */
 
 
     __tcs1[0] = 0x00; /* RDCRC */
@@ -527,7 +553,6 @@ static void asclin_start_tx(void)
 {
     /* Initiate the transmission by using the transmit FIFO level flag */
     ASCLIN1_FLAGSSET.B.TFLS = 1;
-    pga460CommState = ST_CMD_IN_FLIGHT;
 }
 
 static void dma_load_resp_tcs(size_t resp_len)
@@ -558,7 +583,6 @@ static void initDMA(void)
     DMA_CLC.U = 0x00000000;
     __LOCK_CPU_SAFETY_WD();
 
-    /* Initialize an instance of IfxDma_Dma_Config with default values */
     dma_init_tcs();
 
 }
@@ -672,20 +696,16 @@ void PGA460_UltrasonicInit(const PGA460_Config* config)
     PGA460_SetSaturationDiagThreshold(config);
     PGA460_SetDSPScaling(config);
 
-    PGA460_RegisterWriteBlocking(PGA460_REG_TVGAIN0_OFFSET, pga460shadow.TVGAIN0.U, 2);
-    PGA460_RegisterWriteBlocking(PGA460_REG_TVGAIN1_OFFSET, pga460shadow.TVGAIN0.U, 2);
-    PGA460_RegisterWriteBlocking(PGA460_REG_TVGAIN2_OFFSET, pga460shadow.TVGAIN0.U, 2);
-    PGA460_RegisterWriteBlocking(PGA460_REG_TVGAIN3_OFFSET, pga460shadow.TVGAIN0.U, 2);
-    PGA460_RegisterWriteBlocking(PGA460_REG_TVGAIN4_OFFSET, pga460shadow.TVGAIN0.U, 2);
-    PGA460_RegisterWriteBlocking(PGA460_REG_TVGAIN5_OFFSET, pga460shadow.TVGAIN0.U, 2);
+    PGA460_TimeVaryingGainBulkWriteBlocking(5);
+
     PGA460_RegisterWriteBlocking(PGA460_REG_INIT_GAIN_OFFSET, pga460shadow.INIT_GAIN.U, 2);
     PGA460_RegisterWriteBlocking(PGA460_REG_FREQUENCY_OFFSET, pga460shadow.FREQUENCY.U, 2);
     PGA460_RegisterWriteBlocking(PGA460_REG_DEADTIME_OFFSET,  pga460shadow.DEADTIME.U, 2);
-    PGA460_RegisterWriteBlocking(PGA460_REG_PULSE_P1_OFFSET, pga460shadow.PULSE_P1.U, 2);
-    PGA460_RegisterWriteBlocking(PGA460_REG_CURR_LIM_P1_OFFSET, pga460shadow.CURR_LIM_P1.U, 2);
-    PGA460_RegisterWriteBlocking(PGA460_REG_REC_LENGTH_OFFSET, pga460shadow.REC_LENGTH.B.P1_REC, 2);
+    PGA460_RegisterWriteBlocking(PGA460_REG_PULSE_P1_OFFSET,  pga460shadow.PULSE_P1.U, 2);
+    PGA460_RegisterWriteBlocking(PGA460_REG_CURR_LIM_P1_OFFSET,  pga460shadow.CURR_LIM_P1.U, 2);
+    PGA460_RegisterWriteBlocking(PGA460_REG_REC_LENGTH_OFFSET,   pga460shadow.REC_LENGTH.B.P1_REC, 2);
     PGA460_RegisterWriteBlocking(PGA460_REG_SAT_FDIAG_TH_OFFSET, pga460shadow.SAT_FDIAG_TH.U, 2);
-    PGA460_RegisterWriteBlocking(PGA460_REG_DSP_SCALE_OFFSET, pga460shadow.DSP_SCALE.U, 2);
+    PGA460_RegisterWriteBlocking(PGA460_REG_DSP_SCALE_OFFSET,    pga460shadow.DSP_SCALE.U, 2);
 
 }
 
@@ -731,10 +751,8 @@ static boolean PGA460_SendCommandAsync(const PGA460_CommandParams* params)
         return FALSE;
     }
 
-    if (DMA_TSR016.B.CH || DMA_TSR015.B.CH)
-    {
-        return FALSE;
-    }
+    /* protect the DMA while it's transferring */
+    while(DMA_TSR016.B.HTRE != 0);
 
     if (params->cmdType >= PGA460_COMMAND_MAX_COMMANDS)
     {
@@ -756,6 +774,10 @@ static boolean PGA460_SendCommandAsync(const PGA460_CommandParams* params)
     }
 
     dma_load_cmd_tcs(msgLen);
+    __disable();
+    pga460CommState = ST_IN_FLIGHT;
+    activeCommand = params->cmdType;
+    __enable();
     asclin_start_tx();
 
     return TRUE;
@@ -770,11 +792,6 @@ static boolean PGA460_SendCommandBlocking(const PGA460_CommandParams* params, ui
         return FALSE;
     }
 
-    if (DMA_TSR016.B.CH || DMA_TSR015.B.CH)
-    {
-        return FALSE;
-    }
-
     if (params->cmdType >= PGA460_COMMAND_MAX_COMMANDS)
     {
         return FALSE;
@@ -794,16 +811,23 @@ static boolean PGA460_SendCommandBlocking(const PGA460_CommandParams* params, ui
         dma_load_resp_tcs(respLen);
     }
 
+    /* protect the DMA while it's transferring */
+    while(DMA_TSR016.B.HTRE && !DMA_CHCSR016.B.ICH);
+
     dma_load_cmd_tcs(msgLen);
 
     TxComplete = FALSE;
+    __disable();
+    pga460CommState = ST_IN_FLIGHT;
+    activeCommand = params->cmdType;
+    __enable();
     asclin_start_tx();
 
     uint64 start = IfxStm_get(&MODULE_STM2);
 
     if (cmdInfo->expectsResponse)
     {
-        while (!TxComplete || pga460CommState == ST_CMD_IN_FLIGHT)
+        while (!TxComplete || pga460CommState == ST_IN_FLIGHT)
         {
             uint64 now = IfxStm_get(&MODULE_STM2);
             uint64 diff = now - start;
@@ -813,7 +837,7 @@ static boolean PGA460_SendCommandBlocking(const PGA460_CommandParams* params, ui
             }
         }
 
-        rc = ((TxComplete) && (pga460CommState == ST_CMD_FINISHED));
+        rc = ((TxComplete) && (pga460CommState == ST_CMD_DONE));
 
         if (!rc)
         {
@@ -826,7 +850,7 @@ static boolean PGA460_SendCommandBlocking(const PGA460_CommandParams* params, ui
     }
     else
     {
-        while (!TxComplete)
+        while (pga460CommState != ST_CMD_DONE)
         {
             uint64 now = IfxStm_get(&MODULE_STM2);
             uint64 diff = now - start;
@@ -846,7 +870,7 @@ static boolean PGA460_SendCommandBlocking(const PGA460_CommandParams* params, ui
 
 void PGA460_ProcessFrame(void)
 {
-    if (pga460CommState == ST_CMD_FINISHED)
+    if (pga460CommState == ST_CMD_DONE)
     {
         pga460CommState = ST_IDLE;
     }
@@ -857,9 +881,24 @@ boolean PGA460_isAvailable(void)
     return (pga460CommState == ST_IDLE);
 }
 
-boolean PGA460_isDataReady(void)
+void   PGA460_TimeVaryingGainBulkWriteBlocking(uint64 timeoutMs)
 {
-    return (pga460CommState == ST_CMD_FINISHED);
+    PGA460_CommandParams params = {
+            .cmdType = PGA460_COMMAND_TVG_BULK_WRITE,
+            .pga_addr = PGA460_ADDR,
+            .dataLen = 7
+    };
+
+    params.data[0] = pga460shadow.TVGAIN0.U;
+    params.data[1] = pga460shadow.TVGAIN1.U;
+    params.data[2] = pga460shadow.TVGAIN2.U;
+    params.data[3] = pga460shadow.TVGAIN3.U;
+    params.data[4] = pga460shadow.TVGAIN4.U;
+    params.data[5] = pga460shadow.TVGAIN5.U;
+    params.data[6] = pga460shadow.TVGAIN6.U;
+
+    PGA460_SendCommandBlocking(&params, timeoutMs);
+
 }
 
 void PGA460_RegisterReadAsync(uint8 reg_addr)
@@ -959,6 +998,15 @@ void     PGA460_InitTVGs(const PGA460_Config* config)
     pga460shadow.TVGAIN1.B.TVG_T3 = config->tvgT3;
     pga460shadow.TVGAIN2.B.TVG_T4 = config->tvgT4;
     pga460shadow.TVGAIN2.B.TVG_T5 = config->tvgT5;
+    pga460shadow.TVGAIN3.B.TVG_G1 = config->tvgG1;
+    pga460shadow.TVGAIN3.B.TVG_G2 = (config->tvgG2 & 0x3);
+    pga460shadow.TVGAIN4.B.TVG_G2 = (config->tvgG2 & 0xF);
+    pga460shadow.TVGAIN4.B.TVG_G3 = (config->tvgG3 & 0xF);
+    pga460shadow.TVGAIN5.B.TVG_G3 = (config->tvgG3 & 0x3);
+    pga460shadow.TVGAIN5.B.TVG_G4 = config->tvgG4;
+    pga460shadow.TVGAIN6.B.TVG_G5 = config->tvgG5;
+    pga460shadow.TVGAIN6.B.FREQ_SHIFT = config->freqShift;
+
 }
 
 void    PGA460_SetInitialGain(const PGA460_Config* config)

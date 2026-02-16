@@ -16,12 +16,19 @@
 #include "Ifx_Types.h"
 #include "vfw_registry.h"
 
+
+/*********************************************************************************************************************/
+/*------------------------------------------------------Macros-------------------------------------------------------*/
+/*********************************************************************************************************************/
+#define VFW_CHECKPOINT_NAME_MAX_LEN 64U
+
+
 /*********************************************************************************************************************/
 /*------------------------------------------------Function Prototypes------------------------------------------------*/
 /*********************************************************************************************************************/
 
 void VFW_Init(void);
-void VFW_CreateCheckpoint(VfwCheckpoint* cp, const char* name);
+void VFW_CreateCheckpoint(VfwCheckpoint* cp, const char name[VFW_CHECKPOINT_NAME_MAX_LEN]);
 void VFW_CheckpointEntry(VfwCheckpoint* cp);
 void VFW_CheckpointExit(VfwCheckpoint* cp);
 boolean VFW_IntegrityCheck(void);

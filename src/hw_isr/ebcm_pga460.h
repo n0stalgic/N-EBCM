@@ -202,6 +202,13 @@ typedef struct _PGA460_Config
     PGA460_AbsoluteThresholdGainTiming tvgT4;  /**< TVG time segment T4 */
     PGA460_AbsoluteThresholdGainTiming tvgT5;  /**< TVG time segment T5 */
     PGA460_AbsoluteThresholdGainTiming tvgT6; /**<  TVG time segment T6 */
+    uint8 tvgG1;
+    uint8 tvgG2;
+    uint8 tvgG3;
+    uint8 tvgG4;
+    uint8 tvgG5;
+    uint8 freqShift;
+
 
     /* Initial Gain Configuration */
     uint8                       initGain;      /**< Initial AFE gain value */
@@ -331,6 +338,10 @@ void     PGA460_InitDecoupling(const PGA460_Config* config);
  *  \param config Pointer to configuration structure. If NULL, function returns without action.
  */
 void     PGA460_InitThresholds(const PGA460_Config* config);
+
+/** \brief Write Time Varying Gains */
+void   PGA460_TimeVaryingGainBulkWriteBlocking(uint64 timeoutMs);
+
 
 /** \brief Process received frame from PGA460 */
 void     PGA460_ProcessFrame(void);

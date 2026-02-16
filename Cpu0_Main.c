@@ -45,6 +45,8 @@
 #include "ebcm_main.h"
 #include "ebcm_sched.h"
 #include "vfw_registry.h"
+#include "ebcm_fce_crc.h"
+#include "diag/shell.h"
 
 EbcmStmCfg cpuStm0;
 EbcmSysInfo ebcmInfo;
@@ -58,7 +60,7 @@ void core0_main(void)
     IfxCpu_enableInterrupts();
 
     /* !!WATCHDOG0 AND SAFETY WATCHDOG ARE DISABLED HERE!!
-     * Enable the watchdogs and service them per&g_ascdically if it is required
+     * Enable the watchdogs and service them periodically if it is required
      */
     IfxScuWdt_disableCpuWatchdog(IfxScuWdt_getCpuWatchdogPassword());
     IfxScuWdt_disableSafetyWatchdog(IfxScuWdt_getSafetyWatchdogPassword());
@@ -75,7 +77,9 @@ void core0_main(void)
     }
 
     init_UART();
+    FCE_init();
     VFW_Init();
+    initShellInterface();
 
 
     SswTestStatus status = ebcmStatus.sswStatus.lbistStatus;
@@ -96,7 +100,7 @@ void core0_main(void)
     DPRINTF("MCU_STARTUP            [%s]"ENDLINE, ebcmStatus.sswStatus.mcuStartupStatus ? "OK" : "NOK");
     DPRINTF("SMU_ALIVE_ALARM        [%s]"ENDLINE, ebcmStatus.sswStatus.aliveAlarmStatus ? "OK" : "NOK");
     DPRINTF("SMU_REGISTER_MONITOR   [%s]"ENDLINE, ebcmStatus.smuStatus.regMonitorTestSmu ? "PASSED" : "FAILED");
-    DPRINTF("SRAM_BIST              [%s]\r\n"ENDLINE, ebcmStatus.sswStatus.mbistStatus  ? "PASSED" : "FAILED");
+    DPRINTF("SRAM_BIST              [%s]\r\n"ENDLINE, ebcmStatus.sswStatus.mbistStatus   ? "PASSED" : "FAILED");
     DPRINTF("Safe SW boot procedure completed.\r\n"ENDLINE);
 
     /* Wait for CPU sync event */
@@ -107,7 +111,7 @@ void core0_main(void)
 
     while(1)
     {
-
+        runShellInterface();
         EbcmSch_runTasks((IfxCpu_ResourceCpu)IfxCpu_getCoreIndex());
     }
 }

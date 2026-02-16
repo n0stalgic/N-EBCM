@@ -1,10 +1,10 @@
 /******************************************************************************
- * @file    {file_name}
+ * @file    ebcm_fce_crc.c
  * @brief   Add brief here
  *
  * MIT License
  *
- * Copyright (c) 2025 n0stalgic
+ * Copyright (c) 2026 n0stalgic
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -25,68 +25,22 @@
  * SOFTWARE.
  *****************************************************************************/
 
-#ifndef CONFIG_EBCM_CFG_H_
-#define CONFIG_EBCM_CFG_H_
 
 /*********************************************************************************************************************/
 /*-----------------------------------------------------Includes------------------------------------------------------*/
 /*********************************************************************************************************************/
+#include "ebcm_fce_crc.h"
+#include "ebcm_cfg.h"
 
 /*********************************************************************************************************************/
 /*------------------------------------------------------Macros-------------------------------------------------------*/
 /*********************************************************************************************************************/
-#define EBCM_CFG_SSW_ENABLE_LBIST_BOOT            1
-#define EBCM_CFG_SSW_ENABLE_LBIST_APPSW           1
-#define EBCM_CFG_SSW_ENABLE_MONBIST               1
-#define EBCM_CFG_SSW_ENABLE_MCU_FW_CHECK          1
-#define EBCM_CFG_SSW_ENABLE_MCU_STARTUP           1
-#define EBCM_CFG_SSW_ENABLE_ALIVE_ALARM_TEST      1
-#define EBCM_CFG_SSW_ENABLE_REG_MONITOR_TEST      1
-#define EBCM_CFG_SSW_ENABLE_MBIST                 1
-
-/* Number of STM ticks per millisecond */
-#define IFX_CFG_STM_TICKS_PER_MS                  100000
-#define IFX_CFG_STM_TICKS_PER_US                  100
-
-#define LED1_EBCM_ALIVE                           &MODULE_P00,5
-#define LED2_ALRM_DETECTED                        &MODULE_P00,6
-
-/* [°C] difference in the redundant die temperature as specified in the safety manual */
-#define MAX_DIE_TEMP_DIFF                        9.0
-
-#define CPU0_VECT_TABLE_ID                       0
-#define CPU1_VECT_TABLE_ID                       1
-#define CPU2_VECT_TABLE_ID                       2
-
-#define CPU_WHICH_RUN_SMU                        CPU0_VECT_TABLE_ID
-
-#define ISR_PRORITY_SMU_ISR_0                    5
-#define ISR_PRORITY_SMU_ISR_1                    6
-#define ISR_PRORITY_SMU_ISR_2                    7
-#define ISR_PRIORITY_GPT12_TIMER                 3
-#define ISR_PRIORITY_OS_TICK                     4       /* Define the tick for the Application */
-#define ISR_PRIORITY_DMA_CH2                     5       /* DMA ISR priority for final transaction in linked list */
-#define ISR_PRIORITY_FCE_ER                      13      /* Flexible CRC Engine */
-#define ISR_PRIORITY_DTS                         14      /* Die Temperature Sensor */
-#define ISR_PRIORITY_ASCLIN1_RX                  15      /* Ultrasonic sensor RX Prio */
-#define ISR_PRIORITY_ASCLIN1_TX                  16      /* Ultrasonic sensor TX Prio */
-#define ISR_PRIORITY_DMA                         17      /* DMA for PGA460 UART Prio */
-#define ISR_PRIORITY_ASCLIN0_RX                  18      /* Priority of the UART0 VCOM RX ISR                  */
-#define ISR_PRIORITY_ASCLIN0_TX                  19      /* Priority of the UART0 VCOM TX ISR                  */
-#define ISR_PRIORITY_ASCLIN0_ER                  20      /* Priority of the UART0 VCOM ERR ISR                 */
-
-
-
-#define __UNLOCK_CPU_SAFETY_WD() IfxScuWdt_clearCpuEndinit(IfxScuWdt_getCpuWatchdogPassword())
-#define __LOCK_CPU_SAFETY_WD()   IfxScuWdt_setCpuEndinit(IfxScuWdt_getCpuWatchdogPassword())
 
 /*********************************************************************************************************************/
 /*-------------------------------------------------Global variables--------------------------------------------------*/
 /*********************************************************************************************************************/
+boolean fceInitComplete = FALSE;
 
-/*********************************************************************************************************************/
-/*-------------------------------------------------Data Structures---------------------------------------------------*/
-/*********************************************************************************************************************/
 
 /*********************************************************************************************************************/
 /*--------------------------------------------Private Variables/Constants--------------------------------------------*/
@@ -96,5 +50,76 @@
 /*------------------------------------------------Function Prototypes------------------------------------------------*/
 /*********************************************************************************************************************/
 
+/*********************************************************************************************************************/
+/*---------------------------------------------Function Implementations----------------------------------------------*/
+/*********************************************************************************************************************/
 
-#endif /* CONFIG_EBCM_CFG_H_ */
+IFX_INTERRUPT(FCE_ERR_ISR, CPU0_VECT_TABLE_ID, ISR_PRIORITY_FCE_ER);
+
+void FCE_ERR_ISR(void)
+{
+    /* report an error here, fault handling system not fully implemented yet */
+}
+
+void FCE_init(void)
+{
+    __disable();
+    uint16         password = IfxScuWdt_getCpuWatchdogPassword();
+    IfxScuWdt_clearCpuEndinit(password);
+
+    /* Enable CRC engine */
+    FCE_CLC.U = 0x0U;
+
+    /* Enable kernel 1, XOR final value with 0xFFFFFFFF, with reflection */
+    /* AUTOSAR CRC32P4 - 0xF4ACFB13 */
+    FCE_CFG0.B.KERNEL = 0x1U;
+    FCE_CFG0.B.XSEL   = 0x1U;
+    FCE_CFG0.B.REFOUT = 0x1U;
+
+    /* no check */
+    FCE_CFG0.B.CCE = 0x00U;
+
+    /* Set up CRC mismatch interrupt */
+    FCE_CFG0.B.CMI    = 0x1U;
+
+    /* Set a seed */
+    FCE_CRC0.B.CRC = 0xFFFFFFFFU;
+
+    /* Set up interrupts */
+    SRC_FCE0.B.TOS  = 0x00U; /* CPU 0 services */
+    SRC_FCE0.B.SRPN = ISR_PRIORITY_FCE_ER;
+    SRC_FCE0.B.SRE  = 0x01U;
+
+    IfxScuWdt_setCpuEndinit(password);
+    __enable();
+
+    fceInitComplete = TRUE;
+
+}
+
+uint32 FCE_calc_CRC32(const uint8* data, uint16 len, uint32 seed)
+{
+    uint32 result  = 0x0;
+
+    FCE_LENGTH0.U = 0xFACECAFE;
+    FCE_LENGTH0.U = len;
+    FCE_CHECK0.U  = 0xFACECAFE;
+    FCE_CHECK0.U  = 0x0;
+
+
+    FCE_CRC0.U = seed;
+
+    volatile Ifx_FCE_IN_IR* inputData = &FCE_IR0;
+
+    for (uint16 i = 0; i < len; i++)
+    {
+        inputData->U = *(data++);
+    }
+
+    /* FCE engine needs 2 cycles after writing into the IR to read a stable result */
+    result = FCE_RES0.U;
+    result = FCE_RES0.U;
+
+    return result;
+
+}
