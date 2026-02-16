@@ -73,5 +73,5 @@ uint32 VFW_swap32(uint32 val)
 
 uint16 VFW_swap16(uint16 val)
 {
-    return (((val & 0xFF00 >> 8) | (val & 0x00FF) << 8));
+    return ((((val & 0xFF00) >> 8) | (val & 0x00FF) << 8));
 }
