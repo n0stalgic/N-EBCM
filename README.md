@@ -12,15 +12,15 @@ Additionally, Infineon has several application notes, documents, and example pro
 
 | Core | Function | Criticality |
 |------|----------|-------------|
-| Core 0 | ABS algorithm and brake actuation | Safety-critical |
-| Core 1 | Motor control | Safety-critical |
-| Core 2 | Ultrasonic sensor DSP (Crude ADAS), diagnostics, debug output | Non-safety |
+| Core 0 | Safety processor | Safety-critical |
+| Core 1 | Motor and ABS control | Safety-critical |
+| Core 2 | Ultrasonic sensor DSP (Crude ADAS), diagnostics, NV storage | Non-safety |
 
 ## Hardware
 
 - **MCU**: Infineon AURIX TC375 Lite Kit
-- **Brake**: Single brake rotor test rig
-- **Sensors**: Ultrasonic sensor (DSP on Core 2)
+- **Brake**: Bike Brake caliper and brake rotor
+- **Sensors**: PGA460 Ultrasonic DSP
 - Additional hardware details TBD
 
 ## Architecture
