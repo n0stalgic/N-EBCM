@@ -53,7 +53,7 @@ typedef struct
        const uint32 offsetMs;
        const uint32 wcetUs;
        uint32 countdown;
-       uint16 deadlineGuardReload;
+       uint32 deadlineTicks;
        uint8  enabled;
 
 

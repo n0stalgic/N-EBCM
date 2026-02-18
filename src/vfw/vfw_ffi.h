@@ -114,13 +114,14 @@
 /*********************************************************************************************************************/
 
 /* MPU control functions */
+void VFW_ProtectionInit(void);
 void VFW_enableMemProtection(void);
+void VFW_enableTemporalProtection(void);
 void VFW_defineDataProtectionRange(uint32 lowerBoundAddress, uint32 upperBoundAddress, uint8 range);
 void VFW_defineCodeProtectionRange(uint32 lowerBoundAddress, uint32 upperBoundAddress, uint8 range);
 void VFW_enableDataRead(uint8 protectionSet, uint8 range);
 void VFW_enableDataWrite(uint8 protectionSet, uint8 range);
 void VFW_enableCodeExecution(uint8 protectionSet, uint8 range);
-
 
 /*********************************************************************************************************************/
 /*---------------------------------------------Function Implementations----------------------------------------------*/

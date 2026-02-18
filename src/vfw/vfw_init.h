@@ -1,10 +1,10 @@
 /******************************************************************************
- * @file    ebcm_main.h
- * @brief   Interface for system wide ebcm defines
+ * @file    vfw_init.h
+ * @brief   Add brief here
  *
  * MIT License
  *
- * Copyright (c) 2025 n0stalgic
+ * Copyright (c) 2026 n0stalgic
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -25,15 +25,13 @@
  * SOFTWARE.
  *****************************************************************************/
 
-#ifndef INC_EBCM_MAIN_H_
-#define INC_EBCM_MAIN_H_
+#ifndef VFW_VFW_INIT_H_
+#define VFW_VFW_INIT_H_
 
 /*********************************************************************************************************************/
 /*-----------------------------------------------------Includes------------------------------------------------------*/
 /*********************************************************************************************************************/
-#include <safe_computation/smu.h>
-#include "ssw.h"
-#include "ebcm_dts.h"
+#include "Ifx_Types.h"
 
 /*********************************************************************************************************************/
 /*------------------------------------------------------Macros-------------------------------------------------------*/
@@ -47,32 +45,6 @@
 /*-------------------------------------------------Data Structures---------------------------------------------------*/
 /*********************************************************************************************************************/
 
-typedef struct
-{
-    float32 sysFreq;                /**< \brief Actual SPB frequency */
-    float32 cpuFreq;                /**< \brief Actual CPU frequency */
-    float32 pllFreq;                /**< \brief Actual PLL frequency */
-    float32 stmFreq;                /**< \brief Actual STM frequency */
-} EbcmSysInfo;
-
- /* status of EBCM */
-typedef struct
-{
-    SswStatus          sswStatus;
-    EbcmResetCode      resetCode;
-    boolean            wakeupFromStby;
-    SmuExecutionStatus smuStatus;
-    boolean            unlockConfig;
-    boolean            initComplete;
-    DieTempStatusType  dieTempProfile;
-    boolean            ledsInitd;
-
-} EbcmStatus;
-
-IFX_EXTERN EbcmStatus  ebcmStatus;
-IFX_EXTERN EbcmSysInfo ebcmInfo;
-
-
 /*********************************************************************************************************************/
 /*--------------------------------------------Private Variables/Constants--------------------------------------------*/
 /*********************************************************************************************************************/
@@ -80,8 +52,6 @@ IFX_EXTERN EbcmSysInfo ebcmInfo;
 /*********************************************************************************************************************/
 /*------------------------------------------------Function Prototypes------------------------------------------------*/
 /*********************************************************************************************************************/
-void EbcmHw_initEbcm(EbcmSysInfo* ebcmInfo, IfxCpu_ResourceCpu cpuIdx);
-void EbcmHw_initEbcmSafetyMechanisms(void);
+void    VFW_Init(void);
 
-
-#endif /* INC_EBCM_MAIN_H_ */
+#endif /* VFW_VFW_INIT_H_ */

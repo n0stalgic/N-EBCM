@@ -66,14 +66,21 @@
  * ISYNC for other compiler vendors is ensured by use of a preprocessor macro.
  */
 
-void VFW_enableMemProtection()
+void VFW_enableMemProtection(void)
 {
     Ifx_CPU_SYSCON sysconValue;
     sysconValue.U = __mfcr(CPU_SYSCON);                 /* Get the System Configuration Register (SYSCON) value     */
     sysconValue.B.PROTEN = 1;                            /* Set the PROTEN bitfield to enable the Memory Protection */
     __mtcr(CPU_SYSCON, sysconValue.U);                  /* Set the Core Configuration Register (SYSCON)           */
 
+}
 
+void VFW_enableTemporalProtection(void)
+{
+    Ifx_CPU_SYSCON sysconValue;
+    sysconValue.U = __mfcr(CPU_SYSCON);                 /* Get the System Configuration Register (SYSCON) value     */
+    sysconValue.B.TPROTEN = 1;                          /* Set the TPROTEN bitfield to enable the Memory Protection */
+    __mtcr(CPU_SYSCON, sysconValue.U);                  /* Set the Core Configuration Register (SYSCON)             */
 }
 
 /* Function that defines a data protection range in the corresponding CPU Data Protection Range Register (DPR).
@@ -393,5 +400,34 @@ void VFW_enableDataWrite(uint8 protectionSet, uint8 range)
                break;
        }
 
+}
+
+void VFW_ProtectionInit(void)
+{
+    extern __far uint8 _lc_gb_vfw_safe0;
+    extern __far uint8 _lc_ge_vfw_safe0;
+
+    VFW_defineDataProtectionRange(0x00000000, 0xFFFFFFFF, DATA_PROTECTION_RANGE_0);
+    VFW_enableDataRead(PROTECTION_SET_0, DATA_PROTECTION_RANGE_0);
+    VFW_enableDataWrite(PROTECTION_SET_0, DATA_PROTECTION_RANGE_0);
+
+    uint8 *__VFW_SAFE0     = &_lc_gb_vfw_safe0;
+    uint8 *__VFW_SAFE0_END = &_lc_ge_vfw_safe0;
+
+    VFW_defineDataProtectionRange((uint32) __VFW_SAFE0, (uint32) __VFW_SAFE0_END, DATA_PROTECTION_RANGE_15);
+
+    VFW_enableDataRead(PROTECTION_SET_0, DATA_PROTECTION_RANGE_15);
+    VFW_enableDataWrite(PROTECTION_SET_0, DATA_PROTECTION_RANGE_15);
+    VFW_enableDataRead(PROTECTION_SET_1, DATA_PROTECTION_RANGE_15);
+
+    VFW_enableDataRead(PROTECTION_SET_1, DATA_PROTECTION_RANGE_0);
+    VFW_enableDataWrite(PROTECTION_SET_1, DATA_PROTECTION_RANGE_0);
+
+    VFW_defineCodeProtectionRange(0x00000000, 0xFFFFFFFF, CODE_PROTECTION_RANGE_0);
+    VFW_enableCodeExecution(PROTECTION_SET_0, CODE_PROTECTION_RANGE_0);
+    VFW_enableCodeExecution(PROTECTION_SET_1, CODE_PROTECTION_RANGE_0);
+
+    VFW_enableMemProtection();
+    VFW_enableTemporalProtection();
 }
 

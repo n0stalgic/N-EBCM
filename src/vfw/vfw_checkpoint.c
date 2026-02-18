@@ -29,7 +29,6 @@
 
 #pragma section all "vfw_safe0"
 
-/* Integrity Accumulator */
 volatile uint32 VFW_integrity_accumulator = 0U;
 volatile boolean VFW_integrityCheckFailed = FALSE;
 
@@ -37,7 +36,6 @@ volatile boolean VFW_integrityCheckFailed = FALSE;
 /*--------------------------------------------Private Variables/Constants--------------------------------------------*/
 /*********************************************************************************************************************/
 
-/* Vital Framework checkpoint and profiling database 8-byte aligned for MPU protection */
 static VfwCheckpoint* vfwRegistry[VFW_MAX_CHECKPOINTS];
 static uint16 vfwRegistryCount = 0U;
 
@@ -48,40 +46,9 @@ static uint16 vfwRegistryCount = 0U;
 /*---------------------------------------------Function Implementations----------------------------------------------*/
 /*********************************************************************************************************************/
 
-static void VFW_ProtectionInit(void)
+void VFW_initRegistry(void)
 {
-    extern __far uint8 _lc_gb_vfw_safe0;
-    extern __far uint8 _lc_ge_vfw_safe0;
-
-    VFW_defineDataProtectionRange(0x00000000, 0xFFFFFFFF, DATA_PROTECTION_RANGE_0);
-    VFW_enableDataRead(PROTECTION_SET_0, DATA_PROTECTION_RANGE_0);
-    VFW_enableDataWrite(PROTECTION_SET_0, DATA_PROTECTION_RANGE_0);
-
-    uint8 *__VFW_SAFE0 = &_lc_gb_vfw_safe0;
-    uint8 *__VFW_SAFE0_END = &_lc_ge_vfw_safe0;
-
-    VFW_defineDataProtectionRange((uint32) __VFW_SAFE0, (uint32) __VFW_SAFE0_END , DATA_PROTECTION_RANGE_15);
-
-    VFW_enableDataRead(PROTECTION_SET_0, DATA_PROTECTION_RANGE_15);
-    VFW_enableDataWrite(PROTECTION_SET_0, DATA_PROTECTION_RANGE_15);
-    VFW_enableDataRead(PROTECTION_SET_1, DATA_PROTECTION_RANGE_15);
-
-    VFW_enableDataRead(PROTECTION_SET_1, DATA_PROTECTION_RANGE_0);
-    VFW_enableDataWrite(PROTECTION_SET_1, DATA_PROTECTION_RANGE_0);
-
-    VFW_defineCodeProtectionRange(0x00000000, 0xFFFFFFFF, CODE_PROTECTION_RANGE_0);
-    VFW_enableCodeExecution(PROTECTION_SET_0, CODE_PROTECTION_RANGE_0);
-    VFW_enableCodeExecution(PROTECTION_SET_1, CODE_PROTECTION_RANGE_0);
-
-    VFW_enableMemProtection();
-}
-
-void VFW_Init(void)
-{
-    VFW_ProtectionInit();
-
     VFW_GrantSafeMemAccess();
-
 
     VFW_integrity_accumulator = 0U;
     VFW_integrityCheckFailed = FALSE;
@@ -90,10 +57,10 @@ void VFW_Init(void)
     {
         vfwRegistry[i] = NULL_PTR;
     }
+
     vfwRegistryCount = 0;
 
     VFW_ReleaseSafeMemAccess();
-
 }
 
 static uint32 VFW_generateSignature(const char* str)

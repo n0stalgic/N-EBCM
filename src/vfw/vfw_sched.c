@@ -36,6 +36,7 @@
 /*********************************************************************************************************************/
 /*-------------------------------------------------Global variables--------------------------------------------------*/
 /*********************************************************************************************************************/
+
 #pragma section all "vfw_safe0"
 
 volatile uint32 cpu0execTaskCounter;
@@ -133,8 +134,9 @@ void ebcmCore1SchIsr(void);
 void ebcmCore2SchIsr(void);
 void ebcmGpt12DeadlineMonIsr(void);
 
-static inline void runWithUnboundedExecDetectionCore0(uint16 reload, void (*func)(void));
-static inline void runWithUnboundedExecDetectionCore1(uint16 reload, void (*func)(void));
+static inline void runWithUnboundedExecDetectionCore0(uint32 reload, void (*func)(void));
+static inline void runWithUnboundedExecDetectionCore1(uint32 reload, void (*func)(void));
+static inline void updateTemporalProtectionTimerReg(uint32 reload);
 
 
 /*********************************************************************************************************************/
@@ -160,43 +162,34 @@ static inline boolean isCurrentCoreTaskReady(IfxCpu_ResourceCpu currCore)
     return FALSE;
 }
 
-
-static inline void runWithUnboundedExecDetectionCore0(uint16 reload, void (*func)(void))
+static inline void updateTemporalProtectionTimer(uint32 reload)
 {
-    IfxGpt12_T3_run(&MODULE_GPT120, IfxGpt12_TimerRun_stop);
-    IfxSrc_clearRequest(IfxGpt12_T3_getSrc(&MODULE_GPT120));
+    Ifx_CPU_TPS tpsValue;
+    tpsValue.TIMER[0].U = __mfcr(CPU_TPS_TIMER0);
+    tpsValue.TIMER[0].B.TIMER = reload;
+    __mtcr(CPU_TPS_TIMER0, tpsValue.TIMER[0].U);
+}
 
-    /* Arm the WCET overrun detection timer */
-    IfxGpt12_T3_setTimerValue(&MODULE_GPT120, reload);
 
-    IfxGpt12_T3_run(&MODULE_GPT120, IfxGpt12_TimerRun_start);
+static inline void runWithUnboundedExecDetectionCore0(uint32 reload, void (*func)(void))
+{
+
+    updateTemporalProtectionTimer(reload);
 
     (*func)();
 
-    IfxGpt12_T3_run(&MODULE_GPT120, IfxGpt12_TimerRun_stop);
+    updateTemporalProtectionTimer(0);
+
 }
 
-static inline void runWithUnboundedExecDetectionCore1(uint16 reload, void (*func)(void))
+static inline void runWithUnboundedExecDetectionCore1(uint32 reload, void (*func)(void))
 {
-    if (func == NULL)
-    {
-
-    }
-
-    IfxGpt12_T2_run(&MODULE_GPT120, IfxGpt12_TimerRun_stop);
-    IfxSrc_clearRequest(IfxGpt12_T2_getSrc(&MODULE_GPT120));
-
-
-    /* Arm the WCET overrun detection timer */
-    IfxGpt12_T2_setTimerValue(&MODULE_GPT120, reload);
-
-    IfxGpt12_T2_run(&MODULE_GPT120, IfxGpt12_TimerRun_start);
+    updateTemporalProtectionTimer(reload);
 
     (*func)();
 
-    IfxGpt12_T2_run(&MODULE_GPT120, IfxGpt12_TimerRun_stop);
+    updateTemporalProtectionTimer(0);
 }
-
 
 
 void VFW_Gpt12_core0DeadlineTripwireIsr(void)
@@ -277,7 +270,7 @@ void VFW_runTasks(IfxCpu_ResourceCpu cpuId)
                     if (cpuId == IfxCpu_ResourceCpu_0)
                     {
                         core0_currentTask = targetTask;
-                        runWithUnboundedExecDetectionCore0(targetTask->deadlineGuardReload, targetTask->func);
+                        runWithUnboundedExecDetectionCore0(targetTask->deadlineTicks, targetTask->func);
                         VFW_IntegrityCheck();
 
                     }
@@ -285,7 +278,7 @@ void VFW_runTasks(IfxCpu_ResourceCpu cpuId)
                     else if (cpuId == IfxCpu_ResourceCpu_1)
                     {
                         core1_currentTask = targetTask;
-                        runWithUnboundedExecDetectionCore1(targetTask->deadlineGuardReload, targetTask->func);
+                        runWithUnboundedExecDetectionCore1(targetTask->deadlineTicks, targetTask->func);
                         VFW_IntegrityCheck();
                     }
                 }
@@ -382,22 +375,11 @@ void VFW_InitStm(EbcmStmCfg* ebcmStm, IfxCpu_ResourceCpu cpuIdx)
     for (uint8 t_id = 0; t_id < EBCM_TASK_TABLE_END; ++t_id)
     {
         Task *targetTask = &taskTable[t_id];
-        /* Pre-calculate all task deadline guardian timer reloads */
-        uint64 deadlineUsec    = targetTask->wcetUs + TASK_DEADLINE_MARGIN_USEC;
 
-        // SCHED_P * 1e6
-        uint64 num = (uint64)deadlineUsec * (uint64)GPT12_BASE_FREQ_100MHZ;
-
-        uint64 reload64 = (num + ((uint64) SCHED_DENOM) - 1ULL) / SCHED_DENOM;          // ceil(num/den)
-
-        if (reload64 == 0ULL) reload64 = 1ULL;
-        if (reload64 > 0xFFFFULL) reload64 = 0xFFFFULL;
-
-        uint16 reload = (uint16)reload64;
-
-        targetTask->deadlineGuardReload = reload;
+        /* Pre-calculate all task deadline temporal protection reloads */
+        uint32  deadlineTicks    = (uint32) (ebcmInfo.cpuFreq * (targetTask->wcetUs * 1e-6f));
+        targetTask->deadlineTicks = deadlineTicks;
     }
-
 
     /* Initialize configuration-structure with defaults. */
     IfxStm_initCompareConfig(&ebcmStm->stmConfig);

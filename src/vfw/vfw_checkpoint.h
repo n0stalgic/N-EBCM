@@ -27,7 +27,7 @@
 /*------------------------------------------------Function Prototypes------------------------------------------------*/
 /*********************************************************************************************************************/
 
-void    VFW_Init(void);
+void    VFW_initRegistry(void);
 void    VFW_CreateCheckpoint(VfwCheckpoint* cp, const char* name);
 void    VFW_CheckpointEntry(VfwCheckpoint* cp);
 void    VFW_CheckpointExit(VfwCheckpoint* cp);
