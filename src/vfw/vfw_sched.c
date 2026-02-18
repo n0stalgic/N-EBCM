@@ -24,6 +24,7 @@
 #include "IfxCpu_Trap.h"
 #include "vfw_checkpoint.h"
 #include "vfw_ffi.h"
+#include "vfw_init.h"
 #include <string.h>
 #include <vfw_sched.h>
 
@@ -32,34 +33,15 @@
 /*********************************************************************************************************************/
 /*------------------------------------------------------Macros-------------------------------------------------------*/
 /*********************************************************************************************************************/
+#define    VFW_CORE_ID_0_BITPOS    0
+#define    VFW_CORE_ID_1_BITPOS    1
+#define    VFW_CORE_ID_2_BITPOS    2
 
-/*********************************************************************************************************************/
-/*-------------------------------------------------Global variables--------------------------------------------------*/
-/*********************************************************************************************************************/
+#define    VFW_SET_CORE_0          (1 << VFW_CORE_ID_0_BITPOS)
+#define    VFW_SET_CORE_1          (1 << VFW_CORE_ID_1_BITPOS)
+#define    VFW_SET_CORE_2          (1 << VFW_CORE_ID_2_BITPOS)
 
-#pragma section all "vfw_safe0"
-
-volatile uint32 cpu0execTaskCounter;
-volatile uint32 cpu1execTaskCounter;
-volatile uint32 cpu2execTaskCounter;
-
-#pragma section all restore
-
-
-/*********************************************************************************************************************/
-/*--------------------------------------------Private Variables/Constants--------------------------------------------*/
-/*********************************************************************************************************************/
-
-#define CORE0_TASK_START  0U
-#define CORE0_TASK_END    1U
-
-#define CORE1_TASK_START  2U
-#define CORE1_TASK_END    2U
-
-#define CORE2_TASK_START  3U
-#define CORE2_TASK_END    3U
-
-#define EBCM_TASK_TABLE_END    4U
+#define    VFW_CHECK_CORE(x, y)        (x & (1 << y))
 
 #define GPT12_BASE_FREQ_100MHZ    (100000000UL)
 
@@ -78,37 +60,34 @@ volatile uint32 cpu2execTaskCounter;
 
 #define TASK_DEADLINE_MARGIN_USEC  3U
 
+/*********************************************************************************************************************/
+/*-------------------------------------------------Global variables--------------------------------------------------*/
+/*********************************************************************************************************************/
+
+#pragma section all "vfw_safe0"
+
+volatile uint32 cpu0execTaskCounter;
+volatile uint32 cpu1execTaskCounter;
+volatile uint32 cpu2execTaskCounter;
+
+#pragma section all restore
 
 
-#if (CORE0_TASK_START > CORE0_TASK_END)
-#error "Bad Core 0 scheduler task boundaries!"
-#endif
+/*********************************************************************************************************************/
+/*--------------------------------------------Private Variables/Constants--------------------------------------------*/
+/*********************************************************************************************************************/
 
-#if !((CORE1_TASK_START <= CORE1_TASK_END) && (CORE1_TASK_START > CORE0_TASK_END))
-#error "Bad Core 1 scheduler task boundaries!"
-#endif
 
-#if !((CORE2_TASK_START <= CORE2_TASK_END) && (CORE2_TASK_START > CORE1_TASK_END))
-#error "Bad Core 2 scheduler task boundaries!"
-#endif
 
-#if (CORE2_TASK_END >= EBCM_TASK_TABLE_END)
-#error "Scheduler task boundary exceeds taskTable length!"
-#endif
 
 #pragma section all "vfw_safe0"
 static Task taskTable[] =
 {
-        /* ---------------------------- CORE0 TASKS START ---------------------------- */
-        [TASK_ID_C0_WDT] = { WDT_TASK_ID,   EbcmHw_svcWdt,     "EbcmHw_svcWdt",     1,    0,        5,   1,  0, TRUE  },
-        [TASK_ID_C0_LED] = { LED_TASK_ID,   EbcmHw_ledTask,    "EbcmHw_ledTask",    10,   0,        4,   10, 0, TRUE  },
-
-        /* ---------------------------- CORE1 TASKS START ---------------------------- */
-
-        /* ---------------------------- CORE2 TASKS START ---------------------------- */
+        [TASK_ID_C0_WDT] = { WDT_TASK_ID,   EbcmHw_svcWdt,     "EbcmHw_svcWdt",     1,    0,        5,   1,  0, TRUE, VFW_SET_CORE_0  },
+        [TASK_ID_C0_LED] = { LED_TASK_ID,   EbcmHw_ledTask,    "EbcmHw_ledTask",    10,   0,        4,   10, 0, TRUE, VFW_SET_CORE_0 | VFW_SET_CORE_1  },
 
         /* ---------------------------- Sentinel ---------------------------- */
-        [TASK_COUNT] = { 0xFF,    NULL,     "NULL_TASK",              0  ,  0,        0,    0, FALSE }
+        [TASK_COUNT] = { 0xFF,    NULL,     "NULL_TASK",              0  ,  0,        0,    0, FALSE, 0xFFFFFFFFu }
 
 
 };
@@ -170,52 +149,6 @@ static inline void updateTemporalProtectionTimer(uint32 reload)
     __mtcr(CPU_TPS_TIMER0, tpsValue.TIMER[0].U);
 }
 
-
-static inline void runWithUnboundedExecDetectionCore0(uint32 reload, void (*func)(void))
-{
-
-    updateTemporalProtectionTimer(reload);
-
-    (*func)();
-
-    updateTemporalProtectionTimer(0);
-
-}
-
-static inline void runWithUnboundedExecDetectionCore1(uint32 reload, void (*func)(void))
-{
-    updateTemporalProtectionTimer(reload);
-
-    (*func)();
-
-    updateTemporalProtectionTimer(0);
-}
-
-
-void VFW_Gpt12_core0DeadlineTripwireIsr(void)
-{
-
-    /* Just toggle an LED for now. We'll set safe electrical outputs here eventually */
-    IfxCpu_disableInterrupts();
-    IfxScuWdt_disableCpuWatchdog(IfxScuWdt_getCpuWatchdogPassword());
-    IfxPort_setPinState(&MODULE_P00, EBCM_LED2, IfxPort_State_low);
-
-}
-
-void EbcmSch_Gpt12_core1DeadlineTripwireIsr(void)
-{
-
-    /* do nothing for now on core 1. for now, may add a special LED pattern to indicate
-     * WCET violation. for the final system, trigger safe outputs
-     */
-
-    IfxCpu_disableInterrupts();
-    IfxScuWdt_disableCpuWatchdog(IfxScuWdt_getCpuWatchdogPassword());
-    IfxPort_setPinState(&MODULE_P00, EBCM_LED2, IfxPort_State_low);
-
-
-}
-
 void VFW_runTasks(IfxCpu_ResourceCpu cpuId)
 {
     VFW_GrantSafeMemAccess();
@@ -223,37 +156,13 @@ void VFW_runTasks(IfxCpu_ResourceCpu cpuId)
     /* Run hardware timer plausibility checks */
     stmPlausibilityCheck(cpuId);
 
-    uint8 start, end;
-    Ifx_STM* stm;
-
     __disable();
     boolean isCurrentCoreReady = isCurrentCoreTaskReady(cpuId);
     __enable();
 
-    switch(cpuId)
-    {
-        case IfxCpu_ResourceCpu_0:
-            start = CORE0_TASK_START;
-            end   = CORE0_TASK_END;
-            stm  = &MODULE_STM0;
-            break;
-        case IfxCpu_ResourceCpu_1:
-            start = CORE1_TASK_START;
-            end   = CORE1_TASK_END;
-            stm   = &MODULE_STM1;
-            break;
-        case IfxCpu_ResourceCpu_2:
-            start = CORE2_TASK_START;
-            end   = CORE2_TASK_END;
-            stm   = &MODULE_STM2;
-            break;
-        default:
-            return; /* invalid core */
-    }
-
     if (isCurrentCoreReady == TRUE)
     {
-        for (uint16 tId = start; tId <= end; tId++)
+        for (uint16 tId = 0; tId < TASK_COUNT; ++tId)
         {
             Task* targetTask = &taskTable[tId];
             if (targetTask->enabled && targetTask->func != NULL)
@@ -267,19 +176,30 @@ void VFW_runTasks(IfxCpu_ResourceCpu cpuId)
                 {
                     targetTask->countdown  = targetTask->periodMs;
 
-                    if (cpuId == IfxCpu_ResourceCpu_0)
+                    if (IfxCpu_ResourceCpu_0 == cpuId)
                     {
                         core0_currentTask = targetTask;
-                        runWithUnboundedExecDetectionCore0(targetTask->deadlineTicks, targetTask->func);
-                        VFW_IntegrityCheck();
-
                     }
 
-                    else if (cpuId == IfxCpu_ResourceCpu_1)
+                    else if (IfxCpu_ResourceCpu_1 == cpuId)
                     {
                         core1_currentTask = targetTask;
-                        runWithUnboundedExecDetectionCore1(targetTask->deadlineTicks, targetTask->func);
+                    }
+
+                    if (VFW_CHECK_CORE(targetTask->coreIdMask, cpuId))
+                    {
+                        updateTemporalProtectionTimer(targetTask->deadlineTicks);
+
+                        targetTask->func();
+
+                        updateTemporalProtectionTimer(0);
                         VFW_IntegrityCheck();
+                    }
+
+
+                    core0_currentTask = &taskTable[TASK_COUNT];
+                    core1_currentTask = &taskTable[TASK_COUNT];
+
                     }
                 }
             }
@@ -302,10 +222,12 @@ void VFW_runTasks(IfxCpu_ResourceCpu cpuId)
             cpu1execTaskCounter--;
         }
         __enable();
-    }
 
-    VFW_ReleaseSafeMemAccess();
+        VFW_ReleaseSafeMemAccess();
 }
+
+
+
 
 #pragma endoptimize
 
@@ -363,22 +285,28 @@ void ebcmCore2SchIsr(void)
 
 void VFW_InitStm(EbcmStmCfg* ebcmStm, IfxCpu_ResourceCpu cpuIdx)
 {
-    VFW_GrantSafeMemAccess();
-
-    cpu0execTaskCounter = FALSE;
-    cpu1execTaskCounter = FALSE;
-    cpu2execTaskCounter = FALSE;
-
-    /* Disable interrupts */
-    IfxCpu_disableInterrupts();
-
-    for (uint8 t_id = 0; t_id < EBCM_TASK_TABLE_END; ++t_id)
+    if (VFW_IS_CPU0())
     {
-        Task *targetTask = &taskTable[t_id];
+        VFW_GrantSafeMemAccess();
 
-        /* Pre-calculate all task deadline temporal protection reloads */
-        uint32  deadlineTicks    = (uint32) (ebcmInfo.cpuFreq * (targetTask->wcetUs * 1e-6f));
-        targetTask->deadlineTicks = deadlineTicks;
+        cpu0execTaskCounter = FALSE;
+        cpu1execTaskCounter = FALSE;
+        cpu2execTaskCounter = FALSE;
+
+        /* Disable interrupts */
+        IfxCpu_disableInterrupts();
+
+        for (uint8 t_id = 0; t_id < TASK_COUNT; ++t_id)
+        {
+            Task *targetTask = &taskTable[t_id];
+
+            /* Pre-calculate all task deadline temporal protection reloads */
+            uint32  deadlineTicks    = (uint32) (ebcmInfo.cpuFreq * (targetTask->wcetUs * 1e-6f));
+            targetTask->deadlineTicks = deadlineTicks;
+        }
+
+        VFW_ReleaseSafeMemAccess();
+
     }
 
     /* Initialize configuration-structure with defaults. */
@@ -426,32 +354,5 @@ void VFW_InitStm(EbcmStmCfg* ebcmStm, IfxCpu_ResourceCpu cpuIdx)
     /* Enable interrupts again */
     IfxCpu_restoreInterrupts(TRUE);
 
-    VFW_ReleaseSafeMemAccess();
 }
 
-
-void VFW_initGpt12_monitor(void)
-{
-    IfxGpt12_enableModule(&MODULE_GPT120);
-    IfxGpt12_setGpt1BlockPrescaler(&MODULE_GPT120, IfxGpt12_Gpt1BlockPrescaler_16);
-
-    /* Initialize core Timer T3 for core 0  */
-    IfxGpt12_T3_setMode(&MODULE_GPT120, IfxGpt12_Mode_timer);                       /* Set T3 to timer mode         */
-    IfxGpt12_T3_setTimerDirection(&MODULE_GPT120, IfxGpt12_TimerDirection_down);    /* Set T3 count direction       */
-    IfxGpt12_T3_setTimerPrescaler(&MODULE_GPT120, IfxGpt12_TimerInputPrescaler_8);  /* Set T3 input prescaler       */
-
-    /* Initialize auxiliary Timer T2 for core 1  */
-    IfxGpt12_T2_setMode(&MODULE_GPT120, IfxGpt12_Mode_timer);                       /* Set T2 to timer mode         */
-    IfxGpt12_T2_setTimerDirection(&MODULE_GPT120, IfxGpt12_TimerDirection_down);    /* Set T2 count direction       */
-    IfxGpt12_T2_setTimerPrescaler(&MODULE_GPT120, IfxGpt12_TimerInputPrescaler_8);  /* Set T2 input prescaler       */
-
-    /* Initialize the interrupt */
-    volatile Ifx_SRC_SRCR *src0 = IfxGpt12_T3_getSrc(&MODULE_GPT120);               /* Get the interrupt address    */
-    volatile Ifx_SRC_SRCR *src1 = IfxGpt12_T2_getSrc(&MODULE_GPT120);
-    IfxSrc_init(src0, IfxSrc_Tos_cpu0 , ISR_PRIORITY_GPT12_TIMER);                   /* Initialize service request   */
-    IfxSrc_init(src1, IfxSrc_Tos_cpu1 , ISR_PRIORITY_GPT12_TIMER);                   /* Initialize service request   */
-
-
-    IfxSrc_enable(src0);                                                             /* Enable GPT12 interrupt       */
-    IfxSrc_enable(src1);                                                             /* Enable GPT12 interrupt       */
-}

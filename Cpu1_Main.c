@@ -35,13 +35,11 @@
 #include "IfxSmu.h"
 #include "IfxSmu_cfg.h"
 #include "ebcm_main.h"
+#include "vfw_init.h"
 #include "vfw_registry.h"
 #include "ebcm_fce_crc.h"
 
 extern IfxCpu_syncEvent cpuSyncEvent;
-EbcmStmCfg cpuStm1;
-
-
 
 void core1_main(void)
 {
@@ -56,9 +54,15 @@ void core1_main(void)
     IfxCpu_emitEvent(&cpuSyncEvent);
     IfxCpu_waitEvent(&cpuSyncEvent, 1);
 
-   // EbcmSch_InitStm(&cpuStm1, (IfxCpu_ResourceCpu)IfxCpu_getCoreIndex());
+    VFW_Init();
+
+    while (!ebcmStatus.initComplete)
+    {
+        __nop();
+    }
 
     while(1)
     {
+        VFW_runTasks(VFW_GET_CPU_ID());
     }
 }

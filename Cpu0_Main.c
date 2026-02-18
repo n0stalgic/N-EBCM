@@ -47,8 +47,8 @@
 #include "vfw_registry.h"
 #include "ebcm_fce_crc.h"
 #include "diag/shell.h"
+#include "vfw_init.h"
 
-EbcmStmCfg cpuStm0;
 EbcmSysInfo ebcmInfo;
 
 IFX_ALIGN(4) IfxCpu_syncEvent cpuSyncEvent = 0;
@@ -76,7 +76,6 @@ void core0_main(void)
     }
 
     VFW_Init();
-    VFW_InitStm(&cpuStm0,  (IfxCpu_ResourceCpu)IfxCpu_getCoreIndex());
     EbcmHw_initEbcm(&ebcmInfo, (IfxCpu_ResourceCpu)IfxCpu_getCoreIndex());
     initShellInterface();
 
@@ -107,6 +106,6 @@ void core0_main(void)
     while(1)
     {
        runShellInterface();
-       VFW_runTasks((IfxCpu_ResourceCpu)IfxCpu_getCoreIndex());
+       VFW_runTasks(VFW_GET_CPU_ID());
     }
 }

@@ -34,7 +34,7 @@
 #include "IfxPort.h"
 #include "ebcm_cfg.h"
 #include "IfxStm.h"
-
+#include "vfw_init.h"
 
 extern IfxCpu_syncEvent  cpuSyncEvent;
 
@@ -52,6 +52,13 @@ int core2_main(void)
     IfxCpu_waitEvent(&cpuSyncEvent, 1);
 
     //PGA460_InitDevice();
+    VFW_Init();
+
+    while (!ebcmStatus.initComplete)
+    {
+        __nop();
+    }
+
 
     while(1)
     {

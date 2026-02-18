@@ -55,7 +55,7 @@ typedef struct
        uint32 countdown;
        uint32 deadlineTicks;
        uint8  enabled;
-
+       uint32 coreIdMask;
 
 } Task;
 

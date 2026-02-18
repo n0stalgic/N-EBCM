@@ -78,25 +78,17 @@ void EbcmHw_initEbcm(EbcmSysInfo* ebcmInfo, IfxCpu_ResourceCpu cpuIdx)
             PMS_PMSWSTATCLR.B.PWRWKPCLR = 1;
             IfxScuWdt_setSafetyEndinit(endinitSftyPw);
         }
-    }
 
-    ebcmInfo->pllFreq = IfxScuCcu_getPllFrequency();
-    ebcmInfo->cpuFreq = IfxScuCcu_getCpuFrequency(cpuIdx);
-    ebcmInfo->sysFreq = IfxScuCcu_getSpbFrequency();
-
-    switch (cpuIdx)
-    {
-        case IfxCpu_ResourceCpu_0: ebcmInfo->stmFreq = IfxStm_getFrequency(&MODULE_STM0); break;
-        case IfxCpu_ResourceCpu_1: ebcmInfo->stmFreq = IfxStm_getFrequency(&MODULE_STM1); break;
-        case IfxCpu_ResourceCpu_2: ebcmInfo->stmFreq = IfxStm_getFrequency(&MODULE_STM2); break;
-        default: while(1) __disable(); break;
+        ebcmInfo->pllFreq = IfxScuCcu_getPllFrequency();
+        ebcmInfo->cpuFreq = IfxScuCcu_getCpuFrequency(cpuIdx);
+        ebcmInfo->sysFreq = IfxScuCcu_getSpbFrequency();
+        ebcmInfo->stmFreq = IfxStm_getFrequency(&MODULE_STM0);
     }
 
     init_UART();
     EbcmHw_initLeds();
     FCE_init();
     EbcmHw_initDts();
-    VFW_initGpt12_monitor();
 
     ebcmStatus.initComplete = TRUE;
 

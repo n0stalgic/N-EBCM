@@ -14,6 +14,7 @@
 #include "ebcm_cfg.h"
 #include "ebcm_led.h"
 #include "IfxPort.h"
+#include "IfxCpu.h"
 #include "vfw_checkpoint.h"
 #include "ebcm_main.h"
 
@@ -172,7 +173,7 @@ void EbcmHw_initLeds(void)
 
     lc2.ebcmLed = EBCM_LED2;
     lc2.count = 0;
-    lc2.activePattern = ledPatternOff;
+    lc2.activePattern = ledPatternAbsIndev;
 
     ebcmStatus.ledsInitd = TRUE;
 
@@ -218,8 +219,17 @@ void EbcmHw_ledTask(void)
 {
     VFW_CheckpointEntry(&cp_led_task);
 
-    EbcmHw_updateLed(&lc1);
-    EbcmHw_updateLed(&lc2);
+    IfxCpu_ResourceCpu cpuId = IfxCpu_getCoreIndex();
+
+    if (cpuId == IfxCpu_ResourceCpu_0)
+    {
+        EbcmHw_updateLed(&lc1);
+    }
+    else if (cpuId == IfxCpu_ResourceCpu_1)
+    {
+        EbcmHw_updateLed(&lc2);
+    }
+
 
     VFW_CheckpointExit(&cp_led_task);
 }
