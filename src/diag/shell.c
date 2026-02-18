@@ -34,10 +34,10 @@
 #include "Ifx_Console.h"
 #include "IfxScu_reg.h"
 #include "ebcm_main.h"
-#include "ebcm_sched.h"
 #include "ssw.h"
 #include "vfw_checkpoint.h"
 #include <string.h>
+#include <vfw_sched.h>
 
 /*********************************************************************************************************************/
 /*------------------------------------------------------Macros-------------------------------------------------------*/

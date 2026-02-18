@@ -121,6 +121,7 @@ void VFW_enableDataRead(uint8 protectionSet, uint8 range);
 void VFW_enableDataWrite(uint8 protectionSet, uint8 range);
 void VFW_enableCodeExecution(uint8 protectionSet, uint8 range);
 
+
 /*********************************************************************************************************************/
 /*---------------------------------------------Function Implementations----------------------------------------------*/
 /*********************************************************************************************************************/
@@ -141,5 +142,15 @@ IFX_INLINE void set_active_protection_set(uint8 protectionSet)
     __mtcr(CPU_PSW, PSWRegisterValue.U);                /* Set the Program Status Word (PSW) register               */
 }
 
+
+IFX_INLINE void VFW_GrantSafeMemAccess(void)
+{
+    set_active_protection_set(PROTECTION_SET_0);
+}
+
+IFX_INLINE void VFW_ReleaseSafeMemAccess(void)
+{
+    set_active_protection_set(PROTECTION_SET_1);
+}
 
 #endif /* VFW_FFI_H_ */

@@ -29,10 +29,10 @@
 /*********************************************************************************************************************/
 /*-----------------------------------------------------Includes------------------------------------------------------*/
 /*********************************************************************************************************************/
+#include <vfw_sched.h>
 #include "ebcm_main.h"
 #include "Ifx_Types.h"
 #include "IfxCpu.h"
-#include "ebcm_sched.h"
 #include "ebcm_wdt.h"
 #include "ebcm_fce_crc.h"
 #include "ebcm_vcom.h"
@@ -96,7 +96,7 @@ void EbcmHw_initEbcm(EbcmSysInfo* ebcmInfo, IfxCpu_ResourceCpu cpuIdx)
     EbcmHw_initLeds();
     FCE_init();
     EbcmHw_initDts();
-    EbcmSch_initGpt12_monitor();
+    VFW_initGpt12_monitor();
 
     ebcmStatus.initComplete = TRUE;
 

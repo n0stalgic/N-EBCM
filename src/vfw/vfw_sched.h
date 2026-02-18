@@ -92,9 +92,9 @@ extern volatile Task* core1_currentTask;
 /*********************************************************************************************************************/
 /*------------------------------------------------Function Prototypes------------------------------------------------*/
 /*********************************************************************************************************************/
-void EbcmSch_initGpt12_monitor(void);
-void EbcmSch_InitStm(EbcmStmCfg* ebcmStm, IfxCpu_ResourceCpu cpuIdx);
-void EbcmSch_runTasks(IfxCpu_ResourceCpu cpuId);
+void VFW_initGpt12_monitor(void);
+void VFW_InitStm(EbcmStmCfg* ebcmStm, IfxCpu_ResourceCpu cpuIdx);
+void VFW_runTasks(IfxCpu_ResourceCpu cpuId);
 
 
 #endif /* INC_SCHED_H_ */

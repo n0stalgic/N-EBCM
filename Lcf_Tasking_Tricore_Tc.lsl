@@ -738,8 +738,8 @@ derivative tc37
                 // Set safe data below the heap with a 512 byte buffer region
                 group vfw_safe0 (ordered, run_addr=mem:dsram0[VFW_SAFE0_OFFSET])
                 {
-                    select ".data.vfw_*.*";
-                    select ".bss.vfw_*.*";
+                    select ".bss.vfw_safe0";
+                    select ".data.vfw_safe0";
                 }
 
             }

@@ -27,6 +27,7 @@
 #include <ebcm_vcom.h>
 #include <ssw_lbist.h>
 #include <ssw.h>
+#include <vfw_sched.h>
 #include "Ifx_Types.h"
 #include "IfxCpu.h"
 #include "IfxScuWdt.h"
@@ -34,7 +35,6 @@
 #include "IfxSmu.h"
 #include "IfxSmu_cfg.h"
 #include "ebcm_main.h"
-#include "ebcm_sched.h"
 #include "vfw_registry.h"
 #include "ebcm_fce_crc.h"
 

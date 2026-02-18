@@ -36,6 +36,7 @@
 #include <ebcm_vcom.h>
 #include <ssw_lbist.h>
 #include <ssw.h>
+#include <vfw_sched.h>
 #include "Ifx_Types.h"
 #include "IfxCpu.h"
 #include "IfxScuWdt.h"
@@ -43,7 +44,6 @@
 #include "IfxSmu.h"
 #include "IfxSmu_cfg.h"
 #include "ebcm_main.h"
-#include "ebcm_sched.h"
 #include "vfw_registry.h"
 #include "ebcm_fce_crc.h"
 #include "diag/shell.h"
@@ -52,8 +52,6 @@ EbcmStmCfg cpuStm0;
 EbcmSysInfo ebcmInfo;
 
 IFX_ALIGN(4) IfxCpu_syncEvent cpuSyncEvent = 0;
-
-
 
 void core0_main(void)
 {
@@ -77,9 +75,9 @@ void core0_main(void)
         __debug();
     }
 
-    EbcmSch_InitStm(&cpuStm0,  (IfxCpu_ResourceCpu)IfxCpu_getCoreIndex());
-    EbcmHw_initEbcm(&ebcmInfo, (IfxCpu_ResourceCpu)IfxCpu_getCoreIndex());
     VFW_Init();
+    VFW_InitStm(&cpuStm0,  (IfxCpu_ResourceCpu)IfxCpu_getCoreIndex());
+    EbcmHw_initEbcm(&ebcmInfo, (IfxCpu_ResourceCpu)IfxCpu_getCoreIndex());
     initShellInterface();
 
 
@@ -109,6 +107,6 @@ void core0_main(void)
     while(1)
     {
        runShellInterface();
-       EbcmSch_runTasks((IfxCpu_ResourceCpu)IfxCpu_getCoreIndex());
+       VFW_runTasks((IfxCpu_ResourceCpu)IfxCpu_getCoreIndex());
     }
 }

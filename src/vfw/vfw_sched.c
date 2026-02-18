@@ -16,7 +16,6 @@
 #include "IfxScuWdt.h"
 #include "IfxStm.h"
 #include "Ifx_reg.h"
-#include "ebcm_sched.h"
 #include "ebcm_cfg.h"
 #include "sm_stm.h"
 #include "ebcm_isr.h"
@@ -24,7 +23,9 @@
 #include "IfxGpt12.h"
 #include "IfxCpu_Trap.h"
 #include "vfw_checkpoint.h"
+#include "vfw_ffi.h"
 #include <string.h>
+#include <vfw_sched.h>
 
 
 
@@ -35,9 +36,13 @@
 /*********************************************************************************************************************/
 /*-------------------------------------------------Global variables--------------------------------------------------*/
 /*********************************************************************************************************************/
+#pragma section all "vfw_safe0"
+
 volatile uint32 cpu0execTaskCounter;
 volatile uint32 cpu1execTaskCounter;
 volatile uint32 cpu2execTaskCounter;
+
+#pragma section all restore
 
 
 /*********************************************************************************************************************/
@@ -90,6 +95,7 @@ volatile uint32 cpu2execTaskCounter;
 #error "Scheduler task boundary exceeds taskTable length!"
 #endif
 
+#pragma section all "vfw_safe0"
 static Task taskTable[] =
 {
         /* ---------------------------- CORE0 TASKS START ---------------------------- */
@@ -106,9 +112,11 @@ static Task taskTable[] =
 
 };
 
+
 volatile Task* core0_currentTask;
 volatile Task* core1_currentTask;
 
+#pragma section all restore
 
 /*********************************************************************************************************************/
 /*------------------------------------------------Function Prototypes------------------------------------------------*/
@@ -116,7 +124,7 @@ volatile Task* core1_currentTask;
 
 IFX_INTERRUPT(ebcmCore0SchIsr, CPU0_VECT_TABLE_ID, ISR_PRIORITY_OS_TICK);
 IFX_INTERRUPT(ebcmCore1SchIsr, CPU1_VECT_TABLE_ID, ISR_PRIORITY_OS_TICK);
-IFX_INTERRUPT(EbcmSch_Gpt12_core0DeadlineTripwireIsr, CPU0_VECT_TABLE_ID, ISR_PRIORITY_GPT12_TIMER);
+IFX_INTERRUPT(VFW_Gpt12_core0DeadlineTripwireIsr, CPU0_VECT_TABLE_ID, ISR_PRIORITY_GPT12_TIMER);
 IFX_INTERRUPT(EbcmSch_Gpt12_core1DeadlineTripwireIsr, CPU1_VECT_TABLE_ID, ISR_PRIORITY_GPT12_TIMER);
 //IFX_INTERRUPT(ebcmCore2SchIsr, 2, ISR_PRIORITY_OS_TICK);
 
@@ -191,7 +199,7 @@ static inline void runWithUnboundedExecDetectionCore1(uint16 reload, void (*func
 
 
 
-void EbcmSch_Gpt12_core0DeadlineTripwireIsr(void)
+void VFW_Gpt12_core0DeadlineTripwireIsr(void)
 {
 
     /* Just toggle an LED for now. We'll set safe electrical outputs here eventually */
@@ -215,8 +223,9 @@ void EbcmSch_Gpt12_core1DeadlineTripwireIsr(void)
 
 }
 
-void EbcmSch_runTasks(IfxCpu_ResourceCpu cpuId)
+void VFW_runTasks(IfxCpu_ResourceCpu cpuId)
 {
+    VFW_GrantSafeMemAccess();
 
     /* Run hardware timer plausibility checks */
     stmPlausibilityCheck(cpuId);
@@ -301,6 +310,8 @@ void EbcmSch_runTasks(IfxCpu_ResourceCpu cpuId)
         }
         __enable();
     }
+
+    VFW_ReleaseSafeMemAccess();
 }
 
 #pragma endoptimize
@@ -357,8 +368,9 @@ void ebcmCore2SchIsr(void)
 
 }
 
-void EbcmSch_InitStm(EbcmStmCfg* ebcmStm, IfxCpu_ResourceCpu cpuIdx)
+void VFW_InitStm(EbcmStmCfg* ebcmStm, IfxCpu_ResourceCpu cpuIdx)
 {
+    VFW_GrantSafeMemAccess();
 
     cpu0execTaskCounter = FALSE;
     cpu1execTaskCounter = FALSE;
@@ -431,10 +443,12 @@ void EbcmSch_InitStm(EbcmStmCfg* ebcmStm, IfxCpu_ResourceCpu cpuIdx)
 
     /* Enable interrupts again */
     IfxCpu_restoreInterrupts(TRUE);
+
+    VFW_ReleaseSafeMemAccess();
 }
 
 
-void EbcmSch_initGpt12_monitor(void)
+void VFW_initGpt12_monitor(void)
 {
     IfxGpt12_enableModule(&MODULE_GPT120);
     IfxGpt12_setGpt1BlockPrescaler(&MODULE_GPT120, IfxGpt12_Gpt1BlockPrescaler_16);

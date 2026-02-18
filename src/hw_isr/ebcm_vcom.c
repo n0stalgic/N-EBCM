@@ -51,7 +51,7 @@
 /*********************************************************************************************************************/
 /*-------------------------------------------------Global variables--------------------------------------------------*/
 /*********************************************************************************************************************/
-extern IfxAsclin_Asc g_asc;                                                /* Declaration of the ASC handle        */
+IfxAsclin_Asc g_asc;                                                /* Declaration of the ASC handle        */
 IfxStdIf_DPipe g_ascStandardInterface;                                    /* Standard interface object            */
 
 /* The transfer buffers allocate memory for the data itself and for FIFO runtime variables.
